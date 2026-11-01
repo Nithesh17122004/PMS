@@ -539,6 +539,10 @@ window.ClinicFlow.App = {
   window.ClinicFlow.apiDelete = apiDelete;
   window.ClinicFlow.apiGet = apiGet;
 
+  // Expose the DOM query shorthand used by page modules (vanilla JS, not jQuery).
+  window.$ = $;
+  window.ClinicFlow.$ = $;
+
   function icon(name, size) {
     const icons = {
       dashboard: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
