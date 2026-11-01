@@ -32,7 +32,12 @@ window.ClinicFlow.registerRoute("queue", {
     };
 
     const post = async (path, body) => {
-      await window.ClinicFlow.apiPost(path, body);
+      const result = await window.ClinicFlow.apiPost(path, body || {});
+      if (path.endsWith("/start") && result.consultation) {
+        window.ClinicFlow.toast("Consultation opened.", "ok");
+        await window.ClinicFlow.navigate("#/consultation/" + result.consultation.id);
+        return;
+      }
       window.ClinicFlow.toast("Queue updated.", "ok");
       await renderBoard();
     };
