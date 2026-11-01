@@ -52,7 +52,7 @@ window.ClinicFlow.registerRoute("consultations", {
           const patientId = modal.querySelector("#cn-patient").dataset.patientId;
           if (!patientId) { window.ClinicFlow.toast("Search and select a patient by code or name.", "error"); return; }
           const result = await window.ClinicFlow.apiPost("/api/consultations", { patient_id: patientId, doctor_id: $("#cn-doctor").value });
-          window.ClinicFlow.closeModal();
+          // Keep the user on the consultation editor after saving.
           window.ClinicFlow.toast("Consultation draft created", "ok");
           await window.ClinicFlow.navigate("#/consultation/" + result.consultation.id);
         });
@@ -70,7 +70,7 @@ window.ClinicFlow.registerRoute("consultation", {
     host.innerHTML = `
       <div class="page-head">
         <div><div class="page-title">Consultation ${window.ClinicFlow.escapeHtml(c.consultation_code || "")}</div><div class="page-sub">${window.ClinicFlow.escapeHtml(c.patient ? c.patient.full_name : "")} · ${window.ClinicFlow.statusBadge(c.status)}</div></div>
-        <div class="row"><button class="btn" data-back>Back</button><button class="btn btn-accent" id="consult-complete">Complete</button><button class="btn" id="consult-invoice">Invoice</button></div>
+        <div class="row"><button class="btn" data-back>Back</button><button class="btn" id="consult-invoice">Invoice</button></div>
       </div>
       <div class="card"><div class="card-body"><div id="consult-form"></div></div></div>
     `;
@@ -126,7 +126,7 @@ window.ClinicFlow.registerRoute("consultation", {
       };
       const res = await window.ClinicFlow.apiPost("/api/consultations/" + id + "/complete", payload);
       window.ClinicFlow.toast("Consultation completed", "ok");
-      await window.ClinicFlow.navigate("#/consultations/" + res.consultation.id);
+      await window.ClinicFlow.navigate("#/consultation/" + res.consultation.id);
     });
     if (host.querySelector("#consult-invoice")) host.querySelector("#consult-invoice").addEventListener("click", async () => {
       const res = await window.ClinicFlow.apiPost("/api/consultations/" + id + "/invoice");
