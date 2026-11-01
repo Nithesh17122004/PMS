@@ -86,7 +86,7 @@ window.ClinicFlow.registerRoute("billing", {
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Close</button>';
       modal.querySelector(".modal-footer").appendChild(footer);
-      modal.querySelector("[data-modal-cancel]").addEventListener("click", () => window.ClinicFlow.closeModal());
+
       modal.querySelector("#inv-pay").addEventListener("click", async () => {
         const amount = window.prompt("Payment amount", String(inv.balance));
         if (!amount) return;
