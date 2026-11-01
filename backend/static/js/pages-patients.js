@@ -78,7 +78,7 @@ window.ClinicFlow.registerRoute("patients", {
           '<label class="field"><span>First name</span><input class="input" id="pf-first"/></label>' +
           '<label class="field"><span>Last name</span><input class="input" id="pf-last"/></label>' +
           '<label class="field"><span>Gender</span><select class="select" id="pf-gender"><option value="female">Female</option><option value="male">Male</option><option value="other">Other</option><option value="prefer_not_to_say">Prefer not to say</option></select></label>' +
-          '<label class="field"><span>Date of birth</span><input class="class=\"input\" type="date" id="pf-dob"/></label>' +
+          '<label class="field"><span>Date of birth</span><input class="input" type="date" id="pf-dob"/></label>' +
           '<label class="field"><span>Age (optional)</span><input class="input" type="number" id="pf-age"/></label>' +
           '<label class="field"><span>Phone</span><input class="input" id="pf-phone"/></label>' +
           '<label class="field"><span>Email</span><input class="input" id="pf-email"/></label>' +
@@ -88,7 +88,7 @@ window.ClinicFlow.registerRoute("patients", {
         footer.className = "row";
         footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Save patient</button>';
         modal.querySelector(".modal-footer").appendChild(footer);
-        modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
           const payload = {
             first_name: $("#pf-first").value.trim(), last_name: $("#pf-last").value.trim(),
             gender: $("#pf-gender").value, date_of_birth: $("#pf-dob").value || null,
@@ -181,7 +181,7 @@ window.ClinicFlow.registerRoute("patient", {
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Save changes</button>';
       modal.querySelector(".modal-footer").appendChild(footer);
-      modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+      window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
         const payload = {
           first_name: $("#pe-first").value.trim(), last_name: $("#pe-last").value.trim(),
           gender: $("#pe-gender").value, date_of_birth: $("#pe-dob").value || null,
