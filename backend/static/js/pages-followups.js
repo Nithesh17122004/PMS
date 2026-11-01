@@ -61,7 +61,7 @@ window.ClinicFlow.registerRoute("followups", {
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Create</button>';
       modal.querySelector(".modal-footer").appendChild(footer);
-      modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+      window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
         const patientTerm = $("#fu-patient").value.trim();
         let patientId = null;
         if (patientTerm) {
