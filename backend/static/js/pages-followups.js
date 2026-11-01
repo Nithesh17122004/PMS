@@ -6,7 +6,7 @@ window.ClinicFlow.registerRoute("followups", {
     const permissions = new Set(me.permissions || []);
     const can = (code) => permissions.has(code);
     const mayManage = can("followups.manage");
-    const canArrive = mayManage || can("tokens.create");
+    const canArrive = mayManage;
     const localDate = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     host.innerHTML = `
       <div class="page-head">
@@ -139,7 +139,7 @@ window.ClinicFlow.registerRoute("followup", {
     const permissions = new Set(me.permissions || []);
     const can = (code) => permissions.has(code);
     const mayManage = can("followups.manage");
-    const canArrive = mayManage || can("tokens.create");
+    const canArrive = mayManage;
     const response = await window.ClinicFlow.apiGet("/api/followups/" + encodeURIComponent(id));
     const f = response.followup || {};
     const p = f.patient || {};
