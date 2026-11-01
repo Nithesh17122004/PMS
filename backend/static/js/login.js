@@ -9,7 +9,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     errorBox.textContent = "";
     if (!email.value || !password.value) { errorBox.textContent = "Enter your email and password."; return; }
     try {
-      const res = await window.ClinicFlow.apiPost("/api/auth/login", { email: email.value.trim(), password });
+      const res = await window.ClinicFlow.apiPost("/api/auth/login", { email: email.value.trim(), password: password.value });
       const user = res.user;
       window.ClinicFlow.state.user = user;
       window.ClinicFlow.state.clinic = user.clinic;
