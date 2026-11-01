@@ -80,9 +80,9 @@ window.ClinicFlow.registerRoute("consultation", {
       <div class="form-grid">
         <label class="field full"><span>Symptoms</span><textarea class="input" id="cf-symptoms">${window.ClinicFlow.escapeHtml(c.symptoms || "")}</textarea></label>
         <label class="field"><span>Vitals (blood_pressure, pulse, temperature, weight_kg, height_cm, spo2, respiratory_rate)</span><textarea class="input" id="cf-vitals" placeholder='{"blood_pressure":"120/80"}'></textarea></label>
-        <label class="field"><span>Diagnosis summary</span><input class="input" id="cf-diagnosis"/></label>
-        <label class="field full"><span>Treatment plan</span><textarea class="input" id="cf-treatment"></textarea></label>
-        <label class="field full"><span>Doctor notes</span><textarea class="input" id="cf-notes"></textarea></label>
+        <label class="field"><span>Diagnosis summary</span><textarea class="input" id="cf-diagnosis">\${window.ClinicFlow.escapeHtml(c.diagnosis_summary || "")}</textarea></label>
+        <label class="field full"><span>Treatment plan</span><textarea class="input" id="cf-treatment">\${window.ClinicFlow.escapeHtml(c.treatment_plan || "")}</textarea></label>
+        <label class="field full"><span>Doctor notes</span><textarea class="input" id="cf-notes">\${window.ClinicFlow.escapeHtml(c.doctor_notes || "")}</textarea></label>
         <label class="checkbox-row"><input type="checkbox" id="cf-followup" ${c.follow_up_required ? "checked" : ""}/> Follow-up required</label>
         <label class="field"><span>Follow-up date</span><input class="input" type="date" id="cf-followup-date"/></label>
         <label class="field"><span>Follow-up priority</span><select class="select" id="cf-followup-priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
