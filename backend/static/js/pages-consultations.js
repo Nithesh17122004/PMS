@@ -8,7 +8,7 @@ window.ClinicFlow.registerRoute("consultations", {
     host.innerHTML = `
       <div class="page-head">
         <div><div class="page-title">Consultations</div><div class="page-sub">Clinical encounters</div></div>
-        <button class="btn btn-accent" id="consult-new">${window.ClinicFlow.icon("plus", 16)} New consultation</button>
+        ${window.ClinicFlow.state.user.doctor_id && (window.ClinicFlow.state.user.permissions || []).includes("consultations.create") ? '<button class="btn btn-accent" id="consult-new">' + window.ClinicFlow.icon("plus", 16) + ' New consultation</button>' : ""}
       </div>
       <div class="card"><div class="table-wrap"><table class="table"><thead><tr><th>Code</th><th>Patient</th><th>Doctor</th><th>Status</th><th>Started</th><th></th></tr></thead><tbody id="consult-tbody"></tbody></table></div></div>
     `;
@@ -29,7 +29,7 @@ window.ClinicFlow.registerRoute("consultations", {
     $("#consult-tbody").addEventListener("click", async (e) => {
       const btn = e.target.closest("[data-view]");
       if (!btn) return;
-      await window.ClinicFlow.navigate("#/consultations/" + btn.getAttribute("data-view"));
+      await window.ClinicFlow.navigate("#/consultation/" + btn.getAttribute("data-view"));
     });
     if ($("#consult-new")) {
       $("#consult-new").addEventListener("click", async () => {
@@ -40,24 +40,21 @@ window.ClinicFlow.registerRoute("consultations", {
         body.innerHTML = `
           <div class="form-grid">
             <label class="field full"><span>Patient</span><input class="input" id="cn-patient" placeholder="Search patient"/></label>
+            <div id="cn-patient-results" class="field full"></div>
             <label class="field"><span>Doctor</span><select class="select" id="cn-doctor">${doctors.map((d) => `<option value="${d.id}">${window.ClinicFlow.escapeHtml(d.full_name)}</option>`).join("")}</select></label>
           </div>`;
         modal.querySelector(".modal-body").appendChild(body);
+        window.ClinicFlow.bindPatientCodePicker(body.querySelector("#cn-patient"), body.querySelector("#cn-patient-results"));
         const footer = document.createElement("div");
         footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Create draft</button>';
         modal.querySelector(".modal-footer").appendChild(footer);
         window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
-          const patientTerm = $("#cn-patient").value.trim();
-          let patientId = null;
-          if (patientTerm) {
-            const searchRes = await window.ClinicFlow.apiPost("/api/patients/search", { query: patientTerm, limit: 5 });
-            const found = searchRes.patients && searchRes.patients[0];
-            if (found) patientId = found.id;
-          }
-          if (!patientId) { window.ClinicFlow.toast("Select a valid patient.", "error"); return; }
-          await window.ClinicFlow.apiPost("/api/consultations", { patient_id: patientId, doctor_id: $("#cn-doctor").value });
+          const patientId = modal.querySelector("#cn-patient").dataset.patientId;
+          if (!patientId) { window.ClinicFlow.toast("Search and select a patient by code or name.", "error"); return; }
+          const result = await window.ClinicFlow.apiPost("/api/consultations", { patient_id: patientId, doctor_id: $("#cn-doctor").value });
           window.ClinicFlow.closeModal();
           window.ClinicFlow.toast("Consultation draft created", "ok");
+          await window.ClinicFlow.navigate("#/consultation/" + result.consultation.id);
         });
       });
     }
