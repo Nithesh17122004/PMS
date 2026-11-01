@@ -137,10 +137,11 @@ window.ClinicFlow.registerRoute("patient", {
           <span class="avatar lg" style="background:${avatarColor(p.full_name)}">${window.ClinicFlow.initials(p.full_name)}</span>
           <div><div class="page-title">${window.ClinicFlow.escapeHtml(p.full_name)}</div><div class="page-sub mono">${window.ClinicFlow.escapeHtml(p.patient_code)}</div></div>
         </div>
-        <div class="row">
+        <div class="row wrap">
           <button class="btn" data-back>Back</button>
-          <button class="btn" id="patient-edit">Edit</button>
+          ${(window.ClinicFlow.state.user.permissions || []).includes("patients.edit") ? '<button class="btn btn-primary" id="patient-edit">Edit patient</button>' : ""}
           <button class="btn" id="patient-timeline">Timeline</button>
+          ${window.ClinicFlow.state.user.doctor_id && (window.ClinicFlow.state.user.permissions || []).includes("consultations.create") ? '<button class="btn btn-accent" id="patient-write-consultation">Write consultation</button>' : ""}
         </div>
       </div>
       <div class="grid cols-3">
@@ -174,6 +175,69 @@ window.ClinicFlow.registerRoute("patient", {
         </div></div>
       </div>
     `;
+    const safe = window.ClinicFlow.escapeHtml;
+    const section = (title, headers, rows, emptyText) => {
+      const head = headers.map((x) => "<th>" + safe(x) + "</th>").join("");
+      const body = rows.length ? rows.map((row) => "<tr>" + row.map((x) => "<td>" + x + "</td>").join("") + "</tr>").join("") :
+        '<tr><td colspan="' + headers.length + '" class="muted small">' + safe(emptyText) + "</td></tr>";
+      return '<section class="card mt16"><div class="card-header"><div class="card-title">' + safe(title) +
+        '</div></div><div class="table-wrap"><table class="table"><thead><tr>' + head +
+        '</tr></thead><tbody>' + body + '</tbody></table></div></section>';
+    };
+    const badge = (value) => window.ClinicFlow.statusBadge(value || "—");
+    const fmt = (value) => window.ClinicFlow.fmtDate(value);
+    const person = (item) => safe(item && item.doctor ? item.doctor.full_name : "—");
+    const appointments = (p.appointments || []).map((a) => [
+      safe(a.appointment_code), fmt(a.appointment_date), person(a),
+      safe(window.ClinicFlow.fmtTime(a.start_time) + " – " + window.ClinicFlow.fmtTime(a.end_time)), badge(a.status),
+    ]);
+    const visits = (p.visits || []).map((v) => [
+      safe(v.display_number), fmt(v.token_date), person(v),
+      safe((v.visit_type || "").replace(/_/g, " ")), badge(v.status),
+    ]);
+    const consultations = (p.consultations || []).map((c) => [
+      '<button class="btn btn-sm" data-open-consultation="' + safe(c.id) + '">' + safe(c.consultation_code) + '</button>',
+      fmt(c.started_at), person(c), safe(c.diagnosis_summary || "—"), badge(c.status),
+    ]);
+    const followups = (p.followups || []).map((f) => [
+      fmt(f.due_date), person(f), safe(f.priority || "normal"), safe(f.instructions || "—"), badge(f.status),
+    ]);
+    const prescriptions = (p.prescriptions || []).map((rx) => [
+      safe(rx.prescription_code), fmt(rx.issued_at), person(rx), badge(rx.status),
+      safe((rx.items || []).map((item) => item.medicine_name + (item.strength ? " " + item.strength : "")).join(", ") || "—"),
+    ]);
+    const invoices = (p.invoices || []).map((inv) => [
+      safe(inv.invoice_number), fmt(inv.issued_at), window.ClinicFlow.fmtMoney(inv.total),
+      window.ClinicFlow.fmtMoney(inv.amount_paid), window.ClinicFlow.fmtMoney(inv.balance), badge(inv.status),
+    ]);
+    const labs = (p.lab_orders || []).map((lab) => [
+      safe(lab.order_number), fmt(lab.ordered_at), person(lab),
+      safe((lab.items || []).map((item) => item.test ? item.test.name : "").filter(Boolean).join(", ") || "—"), badge(lab.status),
+    ]);
+    const docs = (p.documents || []).map((doc) => [
+      safe(doc.original_name), safe(doc.category || "general"), fmt(doc.created_at),
+      '<a class="btn btn-sm" href="/api/documents/' + encodeURIComponent(doc.id) + '/download" target="_blank" rel="noopener">Download</a>',
+    ]);
+    host.insertAdjacentHTML("beforeend",
+      section("Appointment history", ["Code", "Date", "Doctor", "Time", "Status"], appointments, "No appointments recorded.") +
+      section("Queue / token history", ["Token", "Date", "Doctor", "Visit type", "Status"], visits, "No tokens recorded.") +
+      section("Consultation history", ["Consultation", "Date", "Doctor", "Diagnosis", "Status"], consultations, "No consultations recorded or available for your role.") +
+      section("Follow-up history", ["Due date", "Doctor", "Priority", "Instructions", "Status"], followups, "No follow-ups recorded.") +
+      section("Prescription history", ["Prescription", "Date", "Doctor", "Status", "Medicines"], prescriptions, "No prescriptions recorded or available for your role.") +
+      section("Invoice history", ["Invoice", "Date", "Total", "Paid", "Balance", "Status"], invoices, "No invoices recorded or available for your role.") +
+      section("Laboratory history", ["Order", "Date", "Doctor", "Tests", "Status"], labs, "No laboratory orders recorded or available for your role.") +
+      section("Documents", ["File", "Category", "Uploaded", ""], docs, "No documents uploaded.")
+    );
+    host.querySelectorAll("[data-open-consultation]").forEach((button) => {
+      button.addEventListener("click", () => window.ClinicFlow.navigate("#/consultation/" + button.getAttribute("data-open-consultation")));
+    });
+    const writeConsultation = host.querySelector("#patient-write-consultation");
+    if (writeConsultation) writeConsultation.addEventListener("click", async () => {
+      try {
+        const result = await window.ClinicFlow.apiPost("/api/consultations", { patient_id: id, doctor_id: window.ClinicFlow.state.user.doctor_id });
+        await window.ClinicFlow.navigate("#/consultation/" + result.consultation.id);
+      } catch (error) { window.ClinicFlow.toast(error.message || "Could not start consultation.", "error"); }
+    });
     const backBtn = host.querySelector("[data-back]");
     if (backBtn) backBtn.addEventListener("click", () => window.ClinicFlow.navigate("#/patients"));
     const editBtn = host.querySelector("#patient-edit");
