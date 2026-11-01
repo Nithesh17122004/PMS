@@ -152,6 +152,44 @@ def test_init_db_command_idempotent(app):
         assert Role.query.filter_by(slug="super_admin", clinic_id=None).count() == 1
 
 
+def test_init_db_preserves_existing_data(app):
+    from backend.extensions import db
+    from backend.models import User, Clinic, ClinicSetting
+    from backend.auth.security import hash_password
+    from backend.permissions.rbac import create_clinic_roles, seed_permissions
+
+    with app.app_context():
+        seed_permissions()
+        clinic = Clinic(name="Existing", slug="existing", email="e@e.com", is_active=True)
+        db.session.add(clinic)
+        db.session.flush()
+        db.session.add(ClinicSetting(clinic_id=clinic.id, timezone="Asia/Kolkata", currency="INR", token_mode="doctor", working_days=["mon", "tue", "wed", "thu", "fri", "sat", "sun"]))
+        perm_map = seed_permissions()
+        clinic_roles = create_clinic_roles(clinic.id, perm_map)
+        user = User(clinic_id=clinic.id, role_id=clinic_roles["clinic_admin"].id, email="existing@test.example", password_hash=hash_password("Test@1234567"), full_name="Existing User", is_active=True)
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=["init-db"])
+    assert result.exit_code == 0, result.output
+
+    with app.app_context():
+        from backend.models import User as U
+
+        assert U.query.filter_by(email="existing@test.example").first() is not None
+        assert U.query.get(user_id) is not None
+
+
+def test_check_db_command(app):
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=["check-db"])
+    assert result.exit_code == 0, result.output
+    assert "Connection: OK" in result.output
+    assert "Schema initialized: yes" in result.output
+
+
 def test_index_redirects_to_login_after_setup(client, db):
     client.post(
         "/api/setup",
