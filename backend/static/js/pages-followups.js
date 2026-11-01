@@ -213,7 +213,7 @@ window.ClinicFlow.registerRoute("followup", {
         await refreshDetail();
       });
     }
-    if (canArrive && !["completed", "cancelled"].includes(f.status) && !f.token) {
+    if (canArrive && !["completed", "cancelled"].includes(f.status) && (!f.token || ["cancelled", "completed", "skipped", "no_show"].includes(f.token.status))) {
       addAction("Patient arrived · generate token", async () => {
         const result = await window.ClinicFlow.apiPost("/api/followups/" + id + "/arrive", {});
         window.ClinicFlow.toast("Token " + result.token.display_number + " generated.", "ok");
