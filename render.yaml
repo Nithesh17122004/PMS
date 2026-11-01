@@ -1,0 +1,114 @@
+databases:
+  - name: clinicflow-db
+    plan: basic
+    databaseName: clinicflow
+    user: clinicflow
+
+services:
+  - type: web
+    name: clinicflow
+    runtime: python
+    plan: starter
+    region: singapore
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 wsgi:app
+    healthCheckPath: /healthz
+    healthCheckGracePeriod: 30
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: FLASK_ENV
+        value: production
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clinicflow-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FIELD_ENCRYPTION_KEY
+        generateValue: true
+      - key: BLIND_INDEX_KEY
+        generateValue: true
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: RATELIMIT_STORAGE_URI
+        value: redis://localhost:6379
+      - key: DEMO_MODE
+        value: "false"
+      - key: BASE_URL
+        value: https://clinicflow.onrender.com
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        value: no-reply@clinicflow.app
+      - key: MAIL_FROM_NAME
+        value: ClinicFlow
+      - key: ENABLE_SCHEDULER
+        value: "true"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_JSON
+        value: "true"
+
+  # Single scheduler instance performs reminders / missed follow-ups / retries.
+  - type: worker
+    name: clinicflow-scheduler
+    runtime: python
+    plan: starter
+    region: singapore
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: flask --app wsgi run-scheduler
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: FLASK_ENV
+        value: production
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clinicflow-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FIELD_ENCRYPTION_KEY
+        generateValue: true
+      - key: BLIND_INDEX_KEY
+        generateValue: true
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: RATELIMIT_STORAGE_URI
+        value: redis://localhost:6379
+      - key: DEMO_MODE
+        value: "false"
+      - key: BASE_URL
+        value: https://clinicflow.onrender.com
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        value: no-reply@clinicflow.app
+      - key: MAIL_FROM_NAME
+        value: ClinicFlow
+      - key: ENABLE_SCHEDULER
+        value: "true"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_JSON
+        value: "true"

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="robots" content="noindex">
+  <title>{{ app_name }} · {{ page_title or "ClinicFlow" }}</title>
+  <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+</head>
+<body>
+  <div id="app-root" data-demo="{{ 'true' if demo_mode else 'false' }}"></div>
+  <script src="{{ asset('js/core.js') }}"></script>
+  <script src="{{ asset('js/pages-dashboard.js') }}"></script>
+  <script src="{{ asset('js/pages-patients.js') }}"></script>
+  <script src="{{ asset('js/pages-appointments.js') }}"></script>
+  <script src="{{ asset('js/pages-queue.js') }}"></script>
+  <script src="{{ asset('js/pages-followups.js') }}"></script>
+  <script src="{{ asset('js/pages-consultations.js') }}"></script>
+  <script src="{{ asset('js/pages-billing.js') }}"></script>
+  <script src="{{ asset('js/pages-pharmacy.js') }}"></script>
+  <script src="{{ asset('js/pages-lab.js') }}"></script>
+  <script src="{{ asset('js/pages-reports.js') }}"></script>
+  <script src="{{ asset('js/pages-notifications.js') }}"></script>
+  <script src="{{ asset('js/pages-doctors.js') }}"></script>
+  <script src="{{ asset('js/pages-settings.js') }}"></script>
+  <script src="{{ asset('js/pages-admin.js') }}"></script>
+  <script src="{{ asset('js/bootstrap.js') }}"></script>
+</body>
+</html>

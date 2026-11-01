@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{{ clinic.name }} · Queue</title>
+  <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+</head>
+<body class="display-body">
+  <main class="display-card">
+    <div class="display-clinic">
+      <div class="brand-mark">CF</div>
+      <div>
+        <div class="muted small" style="color:#9db8d4;letter-spacing:0.12em;text-transform:uppercase;font-size:11px;">ClinicFlow Live Queue</div>
+        <h1 style="font-size:30px;color:#fff;" id="display-clinic"></h1>
+        <div class="muted small" id="display-city"></div>
+      </div>
+    </div>
+    <div style="height:26px"></div>
+    <div class="display-row" style="background:transparent;border-color:rgba(255,255,255,0.08)">
+      <div>
+        <div class="display-sub">Now serving</div>
+        <div id="display-serving" style="margin-top:8px;"></div>
+      </div>
+      <div class="text-center">
+        <div class="display-sub">Token</div>
+        <div class="display-number big" id="display-number">--</div>
+      </div>
+    </div>
+    <div style="height:16px"></div>
+    <div class="display-sub">Please wait · <span id="display-message">Please wait for your token.</span></div>
+    <div style="height:16px"></div>
+    <div id="display-counts" class="row" style="justify-content:center;"></div>
+    <div style="height:16px"></div>
+    <div id="display-waiting"></div>
+  </main>
+  <div id="display-root" data-key="{{ display_key }}"></div>
+  <script src="{{ asset('js/core.js') }}"></script>
+  <script src="{{ asset('js/display.js') }}"></script>
+</body>
+</html>

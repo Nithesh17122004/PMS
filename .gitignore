@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.local
+
+# Instance data
+instance/*.db
+instance/*.db-*
+instance/uploads/
+instance/backups/
+instance/clinicflow_mig.db
+
+# Migrations local DBs
+*.db
+
+# Tests cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
