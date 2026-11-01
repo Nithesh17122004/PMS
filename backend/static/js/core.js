@@ -122,6 +122,31 @@ window.ClinicFlow.App = {
     });
   }
 
+  function bindModalAction(button, action, onError) {
+    if (!button || typeof action !== "function") return;
+    let busy = false;
+    button.addEventListener("click", async (event) => {
+      if (busy) {
+        event.preventDefault();
+        return;
+      }
+      busy = true;
+      button.disabled = true;
+      try {
+        await action(event);
+      } catch (error) {
+        if (typeof onError === "function") {
+          onError(error);
+        } else {
+          toast(error && error.message ? error.message : "The action could not be completed. Please try again.", "error");
+        }
+      } finally {
+        busy = false;
+        if (button.isConnected) button.disabled = false;
+      }
+    });
+  }
+
   function openModal({ title, body, footer, wide } = {}) {
     const host = document.createElement("div");
     host.className = "modal-backdrop";
@@ -596,6 +621,7 @@ window.ClinicFlow.App = {
   window.ClinicFlow.closeModal = closeModal;
   window.ClinicFlow.openModal = openModal;
   window.ClinicFlow.confirmDialog = confirmDialog;
+  window.ClinicFlow.bindModalAction = bindModalAction;
   window.ClinicFlow.showLoading = showLoading;
   window.ClinicFlow.hideLoading = hideLoading;
   window.ClinicFlow.emptyState = emptyState;
