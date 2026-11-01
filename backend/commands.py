@@ -52,9 +52,15 @@ def register_cli(app):
     @app.cli.command("seed-demo")
     @click.option("--reset", is_flag=True, help="Remove existing demo clinics and reseed.")
     @click.option("--if-empty", is_flag=True, help="Seed only when no demo clinic exists.")
+    @click.option("--force", is_flag=True, help="Force seeding even if users already exist (development only).")
     @with_appcontext
-    def seed_demo(reset, if_empty):
+    def seed_demo(reset, if_empty, force):
         """Load a realistic fictional demonstration environment."""
+        from .models import User
+
+        if not force and not reset and User.query.count() > 0:
+            click.echo("Setup already completed (users exist). Skipping demo seed. Use --reset or --force to override.")
+            return
         from seeds.demo_seed import seed_demo_environment
 
         result = seed_demo_environment(reset=reset, if_empty=if_empty)

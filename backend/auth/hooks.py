@@ -11,6 +11,14 @@ PUBLIC_API_PATHS = {
     "/api/auth/forgot-password",
     "/api/auth/reset-password",
     "/api/auth/csrf",
+    "/api/setup",
+}
+
+CSRF_EXEMPT_PATHS = {
+    "/api/auth/login",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
+    "/api/auth/csrf",
 }
 
 PASSWORD_CHANGE_ALLOWED = {
@@ -32,7 +40,7 @@ def register_hooks(app):
         unsafe = request.method not in ("GET", "HEAD", "OPTIONS")
         is_public_api_path = path.startswith("/api/public/") or path in PUBLIC_API_PATHS
 
-        if unsafe and not csrf_valid() and not is_public_api_path:
+        if unsafe and not csrf_valid() and path not in CSRF_EXEMPT_PATHS:
             if is_api:
                 return fail("csrf_failed", "Your session security token is missing or expired. Refresh the page.", 403)
             return "Security token missing or invalid.", 403

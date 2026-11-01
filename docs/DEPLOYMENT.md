@@ -1,6 +1,13 @@
 # Deployment guide
 
-## Render
+## First deployment
+
+1. Deploy via `render.yaml` (or `render.demo.yaml` for demo).
+2. Open the app URL. With an empty database you are redirected to `/setup`.
+3. Complete the form (clinic name/email, admin name/email, password). The first Clinic Admin is created and logged in.
+4. You are redirected to `/app`. Configure staff, roles, permissions and settings from Settings.
+
+No command-line administrator creation is required. Demo seeding is optional (`flask --app wsgi seed-demo`) and is disabled in production by default.
 
 The repository includes Render blueprints:
 

@@ -20,16 +20,18 @@ ClinicFlow is a multi-tenant clinic and patient management system built with Fla
 python -m venv .venv
 pip install -r requirements.txt
 flask --app wsgi init-db
-flask --app wsgi seed-demo
 flask --app wsgi run
 ```
 
-Demo accounts (password `Demo@12345`):
+Open http://localhost:5000 — on a fresh database you will be redirected to `/setup` to create your clinic and the first administrator account. No demo account or command-line admin creation is required.
 
-- `demo.admin@clinicflow.demo` / `demo.reception@clinicflow.demo` / `demo.doctor@clinicflow.demo` (Aster Family Clinic)
-- `demo.admin2@clinicflow.demo` / `demo.reception2@clinicflow.demo` / `demo.doctor2@clinicflow.demo` (Harbor Children's Clinic)
+Demo data (optional, development only):
 
-All data is fictional.
+```bash
+flask --app wsgi seed-demo
+```
+
+Demo accounts (password `Demo@12345`) are only created when explicitly seeded.
 
 ## Testing
 

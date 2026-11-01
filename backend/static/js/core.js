@@ -592,7 +592,7 @@ window.ClinicFlow.App = {
 
 window.ClinicFlow.boot = async function () {
   const path = window.location.pathname;
-  const isAuthPage = ["/login", "/forgot-password", "/reset-password"].some((p) => path.startsWith(p));
+  const isAuthPage = ["/login", "/forgot-password", "/reset-password", "/setup"].some((p) => path.startsWith(p));
   if (isAuthPage) {
     return;
   }

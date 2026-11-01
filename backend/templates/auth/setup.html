@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <meta name="robots" content="noindex">
+  <title>First-time setup · {{ app_name }}</title>
+  <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+</head>
+<body class="auth-body">
+  <main class="auth-shell" style="grid-template-columns:1fr;max-width:720px">
+    <section class="auth-panel" style="padding:40px">
+      <div class="row" style="margin-bottom:18px">
+        <div class="brand-mark">CF</div>
+        <div>
+          <h2 style="margin:0">Welcome to ClinicFlow</h2>
+          <p class="muted">Let's set up your clinic. This only happens once.</p>
+        </div>
+      </div>
+      <p class="muted small" style="margin-bottom:18px">
+        Create your clinic and the first administrator account. After this, normal login will be used and this page will no longer be available.
+      </p>
+      <form id="setup-form" class="form-stack" novalidate>
+        <h3 style="margin:14px 0 6px">Clinic information</h3>
+        <label class="field"><span>Clinic name *</span><input class="input" id="setup-clinic-name" required></label>
+        <label class="field"><span>Clinic email *</span><input class="input" id="setup-clinic-email" type="email" required></label>
+        <label class="field"><span>Clinic phone (optional)</span><input class="input" id="setup-clinic-phone"></label>
+        <label class="field"><span>Clinic address (optional)</span><input class="input" id="setup-clinic-address"></label>
+
+        <h3 style="margin:18px 0 6px">Administrator account</h3>
+        <label class="field"><span>Full name *</span><input class="input" id="setup-admin-name" required></label>
+        <label class="field"><span>Email / username *</span><input class="input" id="setup-admin-email" type="email" required></label>
+        <label class="field"><span>Password *</span>
+          <div class="row">
+            <input class="input" id="setup-password" type="password" required>
+            <button type="button" class="btn btn-sm" id="setup-toggle-password">Show</button>
+          </div>
+        </label>
+        <p class="muted small">At least 10 characters with uppercase, lowercase, a number and a symbol.</p>
+        <label class="field"><span>Confirm password *</span><input class="input" id="setup-confirm" type="password" required></label>
+
+        <div class="form-error" id="setup-error" role="alert"></div>
+        <button class="btn btn-primary btn-block btn-lg" type="submit" id="setup-submit">Create clinic and administrator</button>
+      </form>
+    </section>
+  </main>
+  <script src="{{ asset('js/core.js') }}"></script>
+  <script src="{{ asset('js/setup.js') }}"></script>
+</body>
+</html>
