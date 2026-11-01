@@ -70,7 +70,17 @@ window.ClinicFlow.registerRoute("doctors", {
           if (fee === null) return;
           const followUpFee = prompt("Follow-up fee:", String(d.follow_up_fee ?? 0));
           if (followUpFee === null) return;
-          if (!name.trim() || !specialization.trim() || !Number.isFinite(Number(fee)) || Number(fee) < 0 || !Number.isFinite(Number(followUpFee)) || Number(followUpFee) < 0) {
+          const qualifications = prompt("Qualifications:", d.qualifications || "");
+          if (qualifications === null) return;
+          const registration = prompt("Registration number:", d.registration_number || "");
+          if (registration === null) return;
+          const experience = prompt("Experience in years:", String(d.experience_years ?? 0));
+          if (experience === null) return;
+          const bio = prompt("Short biography:", d.bio || "");
+          if (bio === null) return;
+          const available = confirm("Is this doctor available for appointments?");
+          const active = confirm("Keep this doctor profile active?");
+          if (!name.trim() || !specialization.trim() || !Number.isFinite(Number(fee)) || Number(fee) < 0 || !Number.isFinite(Number(followUpFee)) || Number(followUpFee) < 0 || !Number.isInteger(Number(experience)) || Number(experience) < 0) {
             window.ClinicFlow.toast("Enter a doctor name, specialization and valid non-negative fees.", "error");
             return;
           }
@@ -78,6 +88,12 @@ window.ClinicFlow.registerRoute("doctors", {
             await window.ClinicFlow.apiPut("/api/doctors/" + id, {
               full_name: name.trim(), specialization: specialization.trim(),
               room_number: room.trim() || null,
+              qualifications: qualifications.trim() || null,
+              registration_number: registration.trim() || null,
+              experience_years: Number(experience),
+              bio: bio.trim() || null,
+              is_available: available,
+              is_active: active,
               consultation_fee: Number(fee), follow_up_fee: Number(followUpFee),
             });
             window.ClinicFlow.toast("Doctor details updated.", "ok");
