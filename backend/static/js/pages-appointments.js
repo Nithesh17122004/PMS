@@ -74,23 +74,19 @@ window.ClinicFlow.registerRoute("appointments", {
       body.innerHTML = `
         <div class="form-grid">
           <label class="field full"><span>Patient</span><input class="input" id="appt-patient" placeholder="Search and select a patient"/></label>
+          <div id="appt-patient-results" class="field full"></div>
           <label class="field full"><span>Doctor</span><select class="select" id="appt-doctor-sel">${doctorList.map((d) => `<option value="${d.id}">${window.ClinicFlow.escapeHtml(d.full_name)}</option>`).join("")}</select></label>
           <label class="field"><span>Date</span><input class="input" type="date" id="appt-date-sel"/></label>
           <label class="field"><span>Start time</span><input class="input" type="time" id="appt-start-sel"/></label>
         </div>`;
       modal.querySelector(".modal-body").appendChild(body);
+      window.ClinicFlow.bindPatientCodePicker(body.querySelector("#appt-patient"), body.querySelector("#appt-patient-results"));
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Book</button>';
       modal.querySelector(".modal-footer").appendChild(footer);
       window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
-        const patientTerm = $("#appt-patient").value.trim();
-        let patientId = null;
-        if (patientTerm) {
-          const searchRes = await window.ClinicFlow.apiPost("/api/patients/search", { query: patientTerm, limit: 5 });
-          const found = searchRes.patients && searchRes.patients[0];
-          if (found) patientId = found.id;
-        }
-        if (!patientId) { window.ClinicFlow.toast("Select a valid patient.", "error"); return; }
+        const patientId = modal.querySelector("#appt-patient").dataset.patientId;
+        if (!patientId) { window.ClinicFlow.toast("Search and select a patient by code or name before booking.", "error"); return; }
         const payload = {
           patient_id: patientId,
           doctor_id: $("#appt-doctor-sel").value,
