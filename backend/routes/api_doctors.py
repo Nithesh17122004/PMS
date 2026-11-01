@@ -9,15 +9,19 @@ from sqlalchemy import func
 from ..auth.security import audit, hash_password, validate_password_strength
 from ..extensions import db
 from ..models import (
+    Appointment,
     Consultation,
     ConsultationStatus,
     DailyToken,
     Doctor,
     DoctorLeave,
     DoctorSchedule,
+    FollowUpPlan,
     Invoice,
+    LabOrder,
     Patient,
     Payment,
+    Prescription,
     Role,
     TokenStatus,
     User,
@@ -244,6 +248,117 @@ def update_doctor(doctor_id):
     audit("doctor.updated", "doctor", doctor.id, clinic_id=doctor.clinic_id, user_id=g.user.id)
     db.session.commit()
     return ok({"doctor": doctor_detail(doctor)})
+
+
+
+@doctors_bp.post("/api/doctors/<doctor_id>/login")
+@permission_required("doctors.manage")
+def create_doctor_login(doctor_id):
+    doctor = get_scoped_or_404(Doctor, doctor_id)
+    if doctor.user_id:
+        raise ConflictError("This doctor already has a login account. Reset its password instead.")
+    payload = json_body()
+    email = normalize_email(payload.get("email"))
+    if not email or len(email) > 190 or "@" not in email or any(ch.isspace() for ch in email):
+        raise ValidationError("Enter a valid doctor login email address.")
+    user = User.query.filter_by(email=email).first()
+    if user:
+        if user.clinic_id != doctor.clinic_id or not user.role or user.role.slug != "doctor" or user.doctor_profile:
+            raise ConflictError("That email is already assigned to another account.")
+    role = Role.query.filter_by(clinic_id=doctor.clinic_id, slug="doctor").first()
+    if role is None:
+        raise ValidationError("Doctor role is not configured for this clinic.")
+    raw_password = payload.get("password")
+    temporary_password = None
+    if user is None:
+        if raw_password:
+            validate_password_strength(raw_password)
+        else:
+            raw_password = generate_temporary_password()
+            temporary_password = raw_password
+        user = User(
+            clinic_id=doctor.clinic_id,
+            role_id=role.id,
+            email=email,
+            full_name=doctor.full_name,
+            designation="Doctor",
+            password_hash=hash_password(raw_password),
+            must_change_password=temporary_password is not None,
+            avatar_color="#0f9d8f",
+        )
+        db.session.add(user)
+        db.session.flush()
+    doctor.user = user
+    audit("doctor.login_created", "doctor", doctor.id, {"user_id": user.id}, clinic_id=doctor.clinic_id, user_id=g.user.id)
+    db.session.commit()
+    result = {"doctor": doctor_detail(doctor)}
+    if temporary_password:
+        result["temporary_password"] = temporary_password
+    return ok(result, status=201)
+
+
+@doctors_bp.post("/api/doctors/<doctor_id>/reset-password")
+@permission_required("doctors.manage")
+def reset_doctor_password(doctor_id):
+    doctor = get_scoped_or_404(Doctor, doctor_id)
+    if not doctor.user:
+        raise ConflictError("This doctor has no linked login account. Create a doctor login first.")
+    payload = json_body()
+    password = payload.get("password")
+    temporary_password = None
+    if password:
+        validate_password_strength(password)
+    else:
+        password = generate_temporary_password()
+        temporary_password = password
+    user = doctor.user
+    user.password_hash = hash_password(password)
+    user.must_change_password = temporary_password is not None
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    user.password_changed_at = datetime.now(timezone.utc)
+    audit("doctor.password_reset", "user", user.id, {"doctor_id": doctor.id, "temporary": bool(temporary_password)}, clinic_id=doctor.clinic_id, user_id=g.user.id)
+    db.session.commit()
+    result = {"message": "Doctor login password updated."}
+    if temporary_password:
+        result["temporary_password"] = temporary_password
+    return ok(result)
+
+
+@doctors_bp.delete("/api/doctors/<doctor_id>")
+@permission_required("doctors.manage")
+def delete_doctor(doctor_id):
+    doctor = get_scoped_or_404(Doctor, doctor_id)
+    references = {
+        "appointments": Appointment.query.filter_by(doctor_id=doctor.id).count(),
+        "tokens": DailyToken.query.filter_by(doctor_id=doctor.id).count(),
+        "consultations": Consultation.query.filter_by(doctor_id=doctor.id).count(),
+        "followups": FollowUpPlan.query.filter_by(doctor_id=doctor.id).count(),
+        "prescriptions": Prescription.query.filter_by(doctor_id=doctor.id).count(),
+        "lab_orders": LabOrder.query.filter_by(doctor_id=doctor.id).count(),
+    }
+    if any(references.values()):
+        raise ConflictError(
+            "This doctor has linked clinical records and cannot be permanently deleted. Deactivate the profile instead.",
+            details={"references": references},
+        )
+    doctor_code = doctor.doctor_code
+    doctor_name = doctor.full_name
+    had_login = bool(doctor.user)
+    if doctor.user:
+        doctor.user.is_active = False
+        doctor.user.doctor_profile = None
+    audit(
+        "doctor.deleted",
+        "doctor",
+        doctor.id,
+        {"doctor_code": doctor_code, "doctor_name": doctor_name, "preserved_login_disabled": had_login},
+        clinic_id=doctor.clinic_id,
+        user_id=g.user.id,
+    )
+    db.session.delete(doctor)
+    db.session.commit()
+    return ok({"message": f"Doctor {doctor_code} removed. Existing clinical records were not changed."})
 
 
 @doctors_bp.post("/api/doctors/<doctor_id>/schedules")
