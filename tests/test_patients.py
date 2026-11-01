@@ -120,3 +120,16 @@ def test_merge_patients(client, clinic, clinic_admin, db):
     assert resp.status_code == 200
     source = db.session.get(Patient, source_id)
     assert source.merged_into_id == target_id
+
+def test_patient_search_finds_patient_by_exact_patient_code(client, clinic, clinic_admin):
+    login(client, "admin@clinic.test")
+    patient = create_patient(clinic, clinic_admin, first_name="Code", phone="+919000000096")
+    response = client.post(
+        "/api/patients/search",
+        json={"query": patient.patient_code, "limit": 10},
+    )
+    assert response.status_code == 200, response.get_json()
+    matches = response.get_json()["data"]["patients"]
+    assert len(matches) == 1
+    assert matches[0]["id"] == patient.id
+    assert matches[0]["patient_code"] == patient.patient_code
