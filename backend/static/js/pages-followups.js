@@ -2,7 +2,8 @@ window.ClinicFlow.registerRoute("followups", {
   async render() {
     const host = document.querySelector("#page-content");
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-    const data = await window.ClinicFlow.apiGet("/api/followups/dashboard");
+    let data = {};
+    try { data = await window.ClinicFlow.apiGet("/api/followups/dashboard"); } catch (e) { window.ClinicFlow.toast(e.message, "error"); }
     const d = data || {};
     const counts = d.counts || {};
     host.innerHTML = `
@@ -19,8 +20,10 @@ window.ClinicFlow.registerRoute("followups", {
       <div class="card mt16"><div class="card-header"><div class="card-title">Follow-up plans</div></div><div class="table-wrap"><table class="table"><thead><tr><th>Patient</th><th>Doctor</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody id="followup-tbody"></tbody></table></div></div>
     `;
     const load = async () => {
-      const res = await window.ClinicFlow.apiGet("/api/followups");
-      return res || [];
+      try {
+        const res = await window.ClinicFlow.apiGet("/api/followups");
+        return res || [];
+      } catch (e) { window.ClinicFlow.toast(e.message, "error"); return []; }
     };
     const renderRows = (rows) => {
       const tbody = $("#followup-tbody");
@@ -43,7 +46,7 @@ window.ClinicFlow.registerRoute("followups", {
       await window.ClinicFlow.navigate("#/followups/" + id);
     });
     $("#followup-new").addEventListener("click", async () => {
-      const res = await window.ClinicFlow.apiGet("/api/doctors");
+      const res = await window.ClinicFlow.apiGet("/api/doctors").catch(() => []);
       const doctors = Array.isArray(res) ? res : (res.doctors || []);
       const modal = window.ClinicFlow.openModal({ title: "New follow-up", wide: true });
       const body = document.createElement("div");

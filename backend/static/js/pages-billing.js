@@ -25,8 +25,8 @@ window.ClinicFlow.registerRoute("billing", {
       return;
     }
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-    const summary = await window.ClinicFlow.apiGet("/api/billing/summary");
-    const invoices = await window.ClinicFlow.apiGet("/api/invoices");
+    const summary = await window.ClinicFlow.apiGet("/api/billing/summary").catch(() => ({}));
+    const invoices = await window.ClinicFlow.apiGet("/api/invoices").catch(() => []);
     const rows = invoices || [];
     const sum = summary || {};
     host.innerHTML = `
@@ -107,7 +107,7 @@ window.ClinicFlow.registerRoute("billing", {
     });
     if ($("#invoice-new")) {
       $("#invoice-new").addEventListener("click", async () => {
-        const res = await window.ClinicFlow.apiGet("/api/patients");
+        const res = await window.ClinicFlow.apiGet("/api/patients").catch(() => []);
         const patients = Array.isArray(res) ? res : [];
         const modal = window.ClinicFlow.openModal({ title: "New invoice", wide: true });
         const body = document.createElement("div");

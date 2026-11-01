@@ -23,9 +23,11 @@ window.ClinicFlow.registerRoute("appointments", {
       </div>
     `;
     const load = async () => {
-      const q = new URLSearchParams(window.ClinicFlow.doctorQuery());
-      const res = await window.ClinicFlow.apiGet("/api/appointments?" + q.toString());
-      return res || [];
+      try {
+        const q = new URLSearchParams(window.ClinicFlow.doctorQuery());
+        const res = await window.ClinicFlow.apiGet("/api/appointments?" + q.toString());
+        return res || [];
+      } catch (e) { window.ClinicFlow.toast(e.message, "error"); return []; }
     };
     const renderRows = (rows) => {
       const tbody = $("#appt-tbody");
@@ -58,7 +60,8 @@ window.ClinicFlow.registerRoute("appointments", {
     if (dateInputEl) dateInputEl.addEventListener("change", run);
     $("#appt-refresh").addEventListener("click", run);
     await run();
-    const doctors = await window.ClinicFlow.apiGet("/api/doctors");
+    let doctors = [];
+    try { doctors = await window.ClinicFlow.apiGet("/api/doctors"); } catch (e) { window.ClinicFlow.toast(e.message, "error"); }
     const doctorList = Array.isArray(doctors) ? doctors : (doctors.doctors || []);
     doctorSelect.innerHTML = '<option value="">All doctors</option>' + doctorList.map((d) => `<option value="${d.id}">${window.ClinicFlow.escapeHtml(d.full_name)}</option>`).join("");
     await run();

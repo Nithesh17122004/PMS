@@ -2,7 +2,8 @@ window.ClinicFlow.registerRoute("consultations", {
   async render() {
     const host = document.querySelector("#page-content");
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-    const list = await window.ClinicFlow.apiGet("/api/consultations");
+    let list = [];
+    try { list = await window.ClinicFlow.apiGet("/api/consultations"); } catch (e) { window.ClinicFlow.toast(e.message, "error"); }
     const rows = list || [];
     host.innerHTML = `
       <div class="page-head">
@@ -32,7 +33,7 @@ window.ClinicFlow.registerRoute("consultations", {
     });
     if ($("#consult-new")) {
       $("#consult-new").addEventListener("click", async () => {
-        const doctorsRes = await window.ClinicFlow.apiGet("/api/doctors");
+        const doctorsRes = await window.ClinicFlow.apiGet("/api/doctors").catch(() => []);
         const doctors = Array.isArray(doctorsRes) ? doctorsRes : (doctorsRes.doctors || []);
         const modal = window.ClinicFlow.openModal({ title: "New consultation", wide: true });
         const body = document.createElement("div");

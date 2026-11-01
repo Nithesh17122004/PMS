@@ -2,7 +2,7 @@ window.ClinicFlow.registerRoute("doctors", {
   async render() {
     const host = document.querySelector("#page-content");
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-    const list = await window.ClinicFlow.apiGet("/api/doctors");
+    const list = await window.ClinicFlow.apiGet("/api/doctors").catch(() => []);
     const rows = Array.isArray(list) ? list : [];
     host.innerHTML = `
       <div class="page-head">
