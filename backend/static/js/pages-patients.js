@@ -119,7 +119,7 @@ window.ClinicFlow.registerRoute("patients", {
       const btn = e.target.closest("[data-view]");
       if (!btn) return;
       const id = btn.getAttribute("data-view");
-      await window.ClinicFlow.navigate("#/patients/" + id);
+      await window.ClinicFlow.navigate("#/patient/" + id);
     });
   },
 });
