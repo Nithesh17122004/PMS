@@ -48,7 +48,7 @@ window.ClinicFlow.App = {
     wrap.className = "empty-state";
     wrap.innerHTML = '<div>' + (icon || '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 13H8l-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2z"/><polyline points="2 13 7 13 12 3 17 13"/><line x1="16" y1="17" x2="22" y2="17"/></svg>') + '</div><div class="empty-title">' + escapeHtml(title) + '</div>' +
       (sub ? '<div class="empty-sub">' + escapeHtml(sub) + '</div>' : '');
-    return wrap;
+    return wrap.outerHTML;
   }
   function confirmDialog(message, onConfirm, onCancel, confirmText) {
     closeModal();
@@ -557,6 +557,7 @@ window.ClinicFlow.App = {
   window.ClinicFlow.can = can;
   window.ClinicFlow.statusTone = statusTone;
   window.ClinicFlow.toneClass = toneClass;
+  window.ClinicFlow.statusBadge = statusBadge;
   window.ClinicFlow.fmtTime = fmtTime;
   window.ClinicFlow.currentDoctorId = currentDoctorId;
   window.ClinicFlow.doctorQuery = doctorQuery;
