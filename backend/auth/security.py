@@ -81,7 +81,19 @@ def load_logged_in_user() -> None:
     g.permissions = set()
     if not user_id:
         return
-    user = db.session.get(User, user_id)
+def load_logged_in_user() -> None:
+    user_id = session.get("user_id")
+    g.user = None
+    g.clinic = None
+    g.permissions = set()
+    if not user_id:
+        return
+    try:
+        user = db.session.get(User, user_id)
+    except Exception:  # noqa: BLE001
+        # Database may not be initialized or temporarily unavailable.
+        session.clear()
+        return
     if user is None or not user.is_active or user.is_locked:
         session.clear()
         return

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 
 import click
+from flask import current_app
 from flask.cli import with_appcontext
 
 from .extensions import db
@@ -22,7 +23,42 @@ def register_cli(app):
         db.session.commit()
         click.echo("Database initialised.")
 
-    @app.cli.command("create-superadmin")
+    @app.cli.command("check-db")
+    @with_appcontext
+    def check_db():
+        """Verify database connectivity and schema without modifying data."""
+        from sqlalchemy.engine import make_url
+
+        from .models import User
+
+        url = current_app.config.get("SQLALCHEMY_DATABASE_URI", "")
+        try:
+            parsed = make_url(url)
+            host = parsed.host or "local file"
+            database = parsed.database or ""
+        except Exception:  # noqa: BLE001
+            host = "unknown"
+            database = ""
+        try:
+            db.session.execute(db.text("SELECT 1"))
+            conn_ok = True
+        except Exception as exc:  # noqa: BLE001
+            conn_ok = False
+            click.echo(f"Database connection failed: {exc}")
+            raise SystemExit(1)
+        try:
+            user_count = User.query.count()
+            schema_ok = True
+        except Exception as exc:  # noqa: BLE001
+            user_count = None
+            schema_ok = False
+            click.echo(f"Schema check failed (tables may be missing): {exc}")
+        click.echo(f"Host: {host}")
+        click.echo(f"Database: {database}")
+        click.echo(f"Connection: {'OK' if conn_ok else 'FAILED'}")
+        click.echo(f"Schema initialized: {'yes' if schema_ok else 'no'}")
+        if schema_ok:
+            click.echo(f"Users: {user_count}")
     @click.option("--email", prompt=True)
     @click.option("--name", prompt="Full name")
     @click.option("--password", prompt=True, hide_input=True, confirmation_prompt=True)

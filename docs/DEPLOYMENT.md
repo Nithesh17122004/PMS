@@ -71,6 +71,39 @@ flask --app wsgi migrate   # after model changes
 
 `render.demo.yaml` provisions a demo environment with `DEMO_MODE=true`, fictional data and public display enabled.
 
+## Database not initialized (production)
+
+If logs show `relation "users" does not exist`, the schema was never created.
+
+**Safest one-time initialization (recommended):**
+
+1. Render dashboard → web service → **Shell**.
+2. Run:
+
+   ```bash
+   flask --app wsgi init-db
+   ```
+
+3. Verify:
+
+   ```bash
+   flask --app wsgi shell -c "from backend.models import User; print('users:', User.query.count())"
+   ```
+
+   Or open `/healthz` (should return 200).
+
+4. Open the site URL. With an empty `users` table you are redirected to `/setup` to create the first Clinic Admin.
+
+`init-db` is idempotent (`db.create_all()` + idempotent seeders) and safe to re-run. It does not create demo users or overwrite data.
+
+**Do not** run `db.drop_all()`, downgrades, or any destructive command.
+
+**Alternative (release command):** Add `flask --app wsgi init-db` as a Render **Release Command**. Trade-offs: automated and runs before new instances start, but runs on every deploy (safe but redundant) and could race if multiple services share the DB. Prefer the manual Shell command for the first run.
+
+**Required env vars (do not change existing values):** `DATABASE_URL`, `SECRET_KEY`, `FIELD_ENCRYPTION_KEY`, `BLIND_INDEX_KEY`, `SESSION_COOKIE_SECURE=true`, `DEMO_MODE=false`.
+
+Never print or commit these values.
+
 ## Notes
 
 - The scheduler must run on exactly one instance; the blueprint runs it on a dedicated worker.

@@ -23,12 +23,24 @@ def _database_url() -> str:
     # Render / Heroku style URLs use postgres://; SQLAlchemy requires postgresql://
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
+    # Ensure TLS for remote PostgreSQL (e.g. Render) when not already specified.
+    if url.startswith("postgresql://") and "sslmode" not in url.lower():
+        try:
+            from sqlalchemy.engine import make_url
+
+            parsed = make_url(url)
+            host = (parsed.host or "").lower()
+            if host and host not in {"localhost", "127.0.0.1", "::1"}:
+                separator = "&" if "?" in url else "?"
+                url = f"{url}{separator}sslmode=require"
+        except Exception:  # noqa: BLE001
+            pass
     return url
 
 
 class BaseConfig:
     APP_NAME = "ClinicFlow"
-    APP_VERSION = "1.0.0"
+    APP_VERSION = "1.0.1"
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-insecure-secret-change-me")
     DATABASE_URL = _database_url()
     SQLALCHEMY_DATABASE_URI = DATABASE_URL

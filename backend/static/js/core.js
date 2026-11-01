@@ -496,13 +496,15 @@ window.ClinicFlow.App = {
 
   async function boot() {
     subscribeRouting();
-    if (location.pathname === "/login" || location.pathname === "/forgot-password" || location.pathname === "/reset-password") {
+    if (location.pathname === "/login" || location.pathname === "/forgot-password" || location.pathname === "/reset-password" || location.pathname === "/setup") {
       return;
     }
     await init();
   }
 
   window.ClinicFlow = window.ClinicFlow || {};
+  window.ClinicFlow.App = window.ClinicFlow.App || {};
+  window.ClinicFlow.App.boot = boot;
   window.ClinicFlow.api = api;
   window.ClinicFlow.navigate = navigate;
   window.ClinicFlow.state = state;

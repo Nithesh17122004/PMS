@@ -41,14 +41,12 @@ def test_setup_creates_clinic_and_admin(client, db):
     clinic = Clinic.query.filter_by(email="clinic@test.example").first()
     assert clinic is not None
     assert clinic.settings is not None
-    # auto-logged in
     me = client.get("/api/auth/me")
     assert me.status_code == 200
     assert me.get_json()["data"]["user"]["email"] == "admin@test.example"
 
 
 def test_setup_disabled_after_first_user(client, db):
-    # first setup
     client.post(
         "/api/setup",
         json={
@@ -60,7 +58,6 @@ def test_setup_disabled_after_first_user(client, db):
             "confirm_password": "Test@1234567",
         },
     )
-    # second attempt
     resp = client.post(
         "/api/setup",
         json={
@@ -74,7 +71,6 @@ def test_setup_disabled_after_first_user(client, db):
     )
     assert resp.status_code == 409
     assert resp.get_json()["error"]["code"] == "conflict"
-    # setup page redirects to login
     resp = client.get("/setup")
     assert resp.status_code in (301, 302)
     assert "/login" in (resp.headers.get("Location") or "")
@@ -126,6 +122,72 @@ def test_login_works_after_setup(client, db):
     resp = client.post("/api/auth/login", json={"email": "admin@test.example", "password": "Test@1234567"})
     assert resp.status_code == 200
     assert resp.get_json()["ok"] is True
+
+
+def test_missing_schema_returns_503_not_500(client, db):
+    from backend.extensions import db as _db
+
+    _db.drop_all()
+    resp = client.get("/")
+    assert resp.status_code == 503
+    assert b"Database not initialized" in resp.data
+    _db.create_all()
+    from backend.permissions.rbac import seed_permissions, create_super_admin_role
+
+    seed_permissions()
+    create_super_admin_role()
+    _db.session.commit()
+
+
+def test_init_db_command_idempotent(app):
+    runner = app.test_cli_runner()
+    result1 = runner.invoke(args=["init-db"])
+    assert result1.exit_code == 0, result1.output
+    result2 = runner.invoke(args=["init-db"])
+    assert result2.exit_code == 0, result2.output
+    from backend.models import Permission, Role
+
+    with app.app_context():
+        assert Permission.query.count() == 51
+        assert Role.query.filter_by(slug="super_admin", clinic_id=None).count() == 1
+
+
+def test_init_db_preserves_existing_data(app):
+    from backend.extensions import db
+    from backend.models import User, Clinic, ClinicSetting
+    from backend.auth.security import hash_password
+    from backend.permissions.rbac import create_clinic_roles, seed_permissions
+
+    with app.app_context():
+        seed_permissions()
+        clinic = Clinic(name="Existing", slug="existing", email="e@e.com", is_active=True)
+        db.session.add(clinic)
+        db.session.flush()
+        db.session.add(ClinicSetting(clinic_id=clinic.id, timezone="Asia/Kolkata", currency="INR", token_mode="doctor", working_days=["mon", "tue", "wed", "thu", "fri", "sat", "sun"]))
+        perm_map = seed_permissions()
+        clinic_roles = create_clinic_roles(clinic.id, perm_map)
+        user = User(clinic_id=clinic.id, role_id=clinic_roles["clinic_admin"].id, email="existing@test.example", password_hash=hash_password("Test@1234567"), full_name="Existing User", is_active=True)
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=["init-db"])
+    assert result.exit_code == 0, result.output
+
+    with app.app_context():
+        from backend.models import User as U
+
+        assert U.query.filter_by(email="existing@test.example").first() is not None
+        assert U.query.get(user_id) is not None
+
+
+def test_check_db_command(app):
+    runner = app.test_cli_runner()
+    result = runner.invoke(args=["check-db"])
+    assert result.exit_code == 0, result.output
+    assert "Connection: OK" in result.output
+    assert "Schema initialized: yes" in result.output
 
 
 def test_index_redirects_to_login_after_setup(client, db):
