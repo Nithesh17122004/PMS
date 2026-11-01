@@ -49,33 +49,90 @@ window.ClinicFlow.registerRoute("doctors", {
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Close</button>';
       modal.querySelector(".modal-footer").appendChild(footer);
-      modal.querySelector("[data-modal-cancel]").addEventListener("click", () => window.ClinicFlow.closeModal());
-      modal.querySelector("#doctor-leave-new").addEventListener("click", async () => {
+      modal.querySelector("#doctor-leave-new").addEventListener("click", () => {
         const modal2 = window.ClinicFlow.openModal({ title: "Add leave", wide: true });
         const body2 = document.createElement("div");
-        body2.innerHTML = '<div class="form-grid"><label class="field"><span>Start</span><input class="input" type="date" id="dl-start"/></label><label class="field"><span>End</span><input class="input" type="date" id="dl-end"/></label><label class="field full"><span>Reason</span><input class="input" id="dl-reason"/></label></div>';
+        body2.innerHTML = '<div class="form-grid"><label class="field"><span>Start</span><input class="input" type="date" id="dl-start" required/></label><label class="field"><span>End</span><input class="input" type="date" id="dl-end" required/></label><label class="field full"><span>Reason</span><input class="input" id="dl-reason"/></label></div><div data-form-error role="alert" aria-live="polite" hidden style="color:#b91c1c;margin-top:12px"></div>';
         modal2.querySelector(".modal-body").appendChild(body2);
         const footer2 = document.createElement("div");
-        footer2.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Add leave</button>';
+        footer2.innerHTML = '<button class="btn" type="button" data-modal-cancel>Cancel</button><button class="btn btn-primary" type="button" data-modal-confirm>Add leave</button>';
         modal2.querySelector(".modal-footer").appendChild(footer2);
-        modal2.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
-          await window.ClinicFlow.apiPost("/api/doctors/" + id + "/leaves", { start_date: $("#dl-start").value, end_date: $("#dl-end").value, reason: $("#dl-reason").value });
-          window.ClinicFlow.toast("Leave added", "ok");
-          window.ClinicFlow.closeModal();
+        const confirm2 = modal2.querySelector("[data-modal-confirm]");
+        let saving = false;
+        const showError = (message) => {
+          const target = modal2.querySelector("[data-form-error]");
+          target.textContent = message;
+          target.hidden = !message;
+        };
+        confirm2.addEventListener("click", async () => {
+          if (saving) return;
+          const startDate = $("#dl-start").value;
+          const endDate = $("#dl-end").value;
+          if (!startDate || !endDate) return showError("Start and end dates are required.");
+          if (endDate < startDate) return showError("Leave end date must be on or after the start date.");
+          saving = true;
+          confirm2.disabled = true;
+          showError("");
+          try {
+            await window.ClinicFlow.apiPost("/api/doctors/" + id + "/leaves", {
+              start_date: startDate,
+              end_date: endDate,
+              reason: $("#dl-reason").value.trim()
+            });
+            window.ClinicFlow.toast("Leave added", "ok");
+            window.ClinicFlow.closeModal();
+          } catch (error) {
+            showError(error && error.message ? error.message : "Could not add leave. Please try again.");
+          } finally {
+            saving = false;
+            if (modal2.isConnected) confirm2.disabled = false;
+          }
         });
       });
-      modal.querySelector("#doctor-schedule-new").addEventListener("click", async () => {
+      modal.querySelector("#doctor-schedule-new").addEventListener("click", () => {
         const modal2 = window.ClinicFlow.openModal({ title: "Add schedule", wide: true });
         const body2 = document.createElement("div");
-        body2.innerHTML = '<div class="form-grid"><label class="field"><span>Weekday (0=Mon)</span><input class="input" type="number" id="ds-weekday" value="1"/></label><label class="field"><span>Start time</span><input class="input" type="time" id="ds-start"/></label><label class="field"><span>End time</span><input class="input" type="time" id="ds-end"/></label><label class="field"><span>Slot minutes</span><input class="input" type="number" id="ds-slot" value="15"/></label></div>';
+        body2.innerHTML = '<div class="form-grid"><label class="field"><span>Weekday</span><select class="select" id="ds-weekday" required><option value="0">Monday</option><option value="1">Tuesday</option><option value="2">Wednesday</option><option value="3">Thursday</option><option value="4">Friday</option><option value="5">Saturday</option><option value="6">Sunday</option></select></label><label class="field"><span>Start time</span><input class="input" type="time" id="ds-start" required/></label><label class="field"><span>End time</span><input class="input" type="time" id="ds-end" required/></label><label class="field"><span>Slot minutes (5–240)</span><input class="input" type="number" id="ds-slot" min="5" max="240" step="1" value="15" required/></label></div><div data-form-error role="alert" aria-live="polite" hidden style="color:#b91c1c;margin-top:12px"></div>';
         modal2.querySelector(".modal-body").appendChild(body2);
         const footer2 = document.createElement("div");
-        footer2.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Add schedule</button>';
+        footer2.innerHTML = '<button class="btn" type="button" data-modal-cancel>Cancel</button><button class="btn btn-primary" type="button" data-modal-confirm>Add schedule</button>';
         modal2.querySelector(".modal-footer").appendChild(footer2);
-        modal2.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
-          await window.ClinicFlow.apiPost("/api/doctors/" + id + "/schedules", { weekday: Number($("#ds-weekday").value), start_time: $("#ds-start").value, end_time: $("#ds-end").value, slot_minutes: Number($("#ds-slot").value) });
-          window.ClinicFlow.toast("Schedule added", "ok");
-          window.ClinicFlow.closeModal();
+        const confirm2 = modal2.querySelector("[data-modal-confirm]");
+        let saving = false;
+        const showError = (message) => {
+          const target = modal2.querySelector("[data-form-error]");
+          target.textContent = message;
+          target.hidden = !message;
+        };
+        confirm2.addEventListener("click", async () => {
+          if (saving) return;
+          const weekday = Number($("#ds-weekday").value);
+          const startTime = $("#ds-start").value;
+          const endTime = $("#ds-end").value;
+          const slotMinutes = Number($("#ds-slot").value);
+          if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) return showError("Choose a weekday from Monday to Sunday.");
+          if (!startTime) return showError("Start time is required.");
+          if (!endTime) return showError("End time is required.");
+          if (endTime <= startTime) return showError("End time must be after start time.");
+          if (!Number.isInteger(slotMinutes) || slotMinutes < 5 || slotMinutes > 240) return showError("Slot duration must be a whole number between 5 and 240 minutes.");
+          saving = true;
+          confirm2.disabled = true;
+          showError("");
+          try {
+            await window.ClinicFlow.apiPost("/api/doctors/" + id + "/schedules", {
+              weekday,
+              start_time: startTime,
+              end_time: endTime,
+              slot_minutes: slotMinutes
+            });
+            window.ClinicFlow.toast("Schedule added", "ok");
+            window.ClinicFlow.closeModal();
+          } catch (error) {
+            showError(error && error.message ? error.message : "Could not add schedule. Please try again.");
+          } finally {
+            saving = false;
+            if (modal2.isConnected) confirm2.disabled = false;
+          }
         });
       });
       modal.querySelector("#doctor-queue-link").addEventListener("click", () => window.ClinicFlow.navigate("#/queue"));
@@ -84,16 +141,53 @@ window.ClinicFlow.registerRoute("doctors", {
       $("#doctor-new").addEventListener("click", async () => {
         const modal = window.ClinicFlow.openModal({ title: "Add doctor" });
         const body = document.createElement("div");
-        body.innerHTML = '<div class="form-grid"><label class="field full"><span>Full name</span><input class="input" id="doc-name"/></label><label class="field full"><span>Specialization</span><input class="input" id="doc-spec"/></label></div>';
+        body.innerHTML = '<div class="form-grid"><label class="field full"><span>Full name</span><input class="input" id="doc-name" required/></label><label class="field full"><span>Specialization</span><input class="input" id="doc-spec" required/></label><label class="field full"><span>Login email (optional)</span><input class="input" type="email" id="doc-email"/></label><label class="field full"><span>Password (leave blank for temporary password)</span><input class="input" type="password" id="doc-password"/></label></div><p class="muted small">Without a login email, this creates a doctor profile only. Add an email to create and link a doctor login account.</p><div data-form-error role="alert" aria-live="polite" hidden style="color:#b91c1c;margin-top:12px"></div>';
         modal.querySelector(".modal-body").appendChild(body);
         const footer = document.createElement("div");
-        footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Add doctor</button>';
+        footer.innerHTML = '<button class="btn" type="button" data-modal-cancel>Cancel</button><button class="btn btn-primary" type="button" data-modal-confirm>Add doctor</button>';
         modal.querySelector(".modal-footer").appendChild(footer);
-        modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
-          await window.ClinicFlow.apiPost("/api/doctors", { full_name: $("#doc-name").value, specialization: $("#doc-spec").value });
-          window.ClinicFlow.toast("Doctor added", "ok");
-          window.ClinicFlow.closeModal();
-          window.ClinicFlow.navigate("#/doctors");
+        const confirm = modal.querySelector("[data-modal-confirm]");
+        let saving = false;
+        confirm.addEventListener("click", async () => {
+          if (saving) return;
+          const fullName = $("#doc-name").value.trim();
+          const specialization = $("#doc-spec").value.trim();
+          const email = $("#doc-email").value.trim();
+          const password = $("#doc-password").value;
+          const errorBox = modal.querySelector("[data-form-error]");
+          if (!fullName || !specialization) {
+            errorBox.textContent = "Doctor name and specialization are required.";
+            errorBox.hidden = false;
+            return;
+          }
+          if (password && (password.length < 10 || password.length > 72 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password))) {
+            errorBox.textContent = "Password must be 10–72 characters and include uppercase, lowercase, a number, and a symbol.";
+            errorBox.hidden = false;
+            return;
+          }
+          errorBox.hidden = true;
+          saving = true;
+          confirm.disabled = true;
+          try {
+            const result = await window.ClinicFlow.apiPost("/api/doctors", {
+              full_name: fullName,
+              specialization,
+              email: email || null,
+              password: password || null
+            });
+            if (result.doctor && result.doctor.temporary_password) {
+              window.prompt("Temporary doctor password (copy now):", result.doctor.temporary_password);
+            }
+            window.ClinicFlow.toast("Doctor added", "ok");
+            window.ClinicFlow.closeModal();
+            await window.ClinicFlow.navigate("#/doctors");
+          } catch (error) {
+            errorBox.textContent = error && error.message ? error.message : "Could not create doctor. Please try again.";
+            errorBox.hidden = false;
+          } finally {
+            saving = false;
+            if (modal.isConnected) confirm.disabled = false;
+          }
         });
       });
     }
