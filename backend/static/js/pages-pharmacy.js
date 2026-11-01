@@ -47,7 +47,7 @@ window.ClinicFlow.registerRoute("pharmacy", {
         const footer = document.createElement("div");
         footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Dispense</button>';
         modal.querySelector(".modal-footer").appendChild(footer);
-        modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
           const items = [{ medication_id: window.prompt("Medication ID to dispense", ""), quantity: Number(window.prompt("Quantity", "1")) }];
           const payload = {
             prescription_id: $("#ph-rx").value || null,
