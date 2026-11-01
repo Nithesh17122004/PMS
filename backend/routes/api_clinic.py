@@ -247,7 +247,7 @@ def create_staff():
         raise ValidationError("Staff name and email are required.")
     if len(full_name) > 140:
         raise ValidationError("Staff name must be 140 characters or fewer.")
-    if len(email) > 190 or not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", email):
+    if len(email) > 190 or not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
         raise ValidationError("Enter a valid email address (up to 190 characters).")
     if User.query.filter_by(email=email).first():
         raise ConflictError("A user with that email already exists.")
