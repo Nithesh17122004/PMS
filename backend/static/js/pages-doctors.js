@@ -160,6 +160,16 @@ window.ClinicFlow.registerRoute("doctors", {
             errorBox.hidden = false;
             return;
           }
+          if (password && !email) {
+            errorBox.textContent = "A login email is required when setting a password.";
+            errorBox.hidden = false;
+            return;
+          }
+          if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+            errorBox.textContent = "Enter a valid doctor login email address.";
+            errorBox.hidden = false;
+            return;
+          }
           if (password && (password.length < 10 || password.length > 72 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password))) {
             errorBox.textContent = "Password must be 10–72 characters and include uppercase, lowercase, a number, and a symbol.";
             errorBox.hidden = false;
