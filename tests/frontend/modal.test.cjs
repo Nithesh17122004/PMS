@@ -90,3 +90,52 @@ test("confirmation dialog invokes its confirm callback only once", () => {
   assert.equal(calls, 1);
   dom.window.close();
 });
+
+
+test("confirmation dialog stays open after a failed async action and can retry", async () => {
+  const { dom, api } = createClinicFlow();
+  let attempts = 0;
+  api.confirmDialog("Run action?", async () => {
+    attempts += 1;
+    if (attempts === 1) throw new Error("Temporary failure");
+  });
+  const host = dom.window.document.querySelector(".modal-backdrop");
+  const button = host.querySelector("[data-modal-confirm]");
+  button.click();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(host.isConnected, true);
+  assert.equal(host.querySelector("[data-confirm-error]").textContent, "Temporary failure");
+  assert.equal(button.disabled, false);
+  button.click();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(attempts, 2);
+  assert.equal(dom.window.document.querySelectorAll(".modal-backdrop").length, 0);
+  dom.window.close();
+});
+
+test("bindModalAction blocks duplicate submissions and reports rejection", async () => {
+  const { dom, api } = createClinicFlow();
+  const modal = api.openModal({ title: "Guarded action" });
+  const footer = modal.querySelector(".modal-footer");
+  footer.innerHTML = '<button type="button" data-modal-confirm>Save</button><div data-error></div>';
+  const button = footer.querySelector("[data-modal-confirm]");
+  const error = footer.querySelector("[data-error]");
+  let calls = 0;
+  let release;
+  const pending = new Promise((resolve) => { release = resolve; });
+  api.bindModalAction(button, async () => {
+    calls += 1;
+    await pending;
+    throw new Error("Save failed");
+  }, (reason) => { error.textContent = reason.message; });
+  button.click();
+  button.click();
+  assert.equal(calls, 1);
+  assert.equal(button.disabled, true);
+  release();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(error.textContent, "Save failed");
+  assert.equal(button.disabled, false);
+  assert.equal(modal.isConnected, true);
+  dom.window.close();
+});
