@@ -64,7 +64,7 @@ window.ClinicFlow.registerRoute("doctors", {
           target.textContent = message;
           target.hidden = !message;
         };
-        confirm2.addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(confirm2, async () => {
           if (saving) return;
           const startDate = $("#dl-start").value;
           const endDate = $("#dl-end").value;
@@ -104,7 +104,7 @@ window.ClinicFlow.registerRoute("doctors", {
           target.textContent = message;
           target.hidden = !message;
         };
-        confirm2.addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(confirm2, async () => {
           if (saving) return;
           const weekday = Number($("#ds-weekday").value);
           const startTime = $("#ds-start").value;
@@ -148,7 +148,7 @@ window.ClinicFlow.registerRoute("doctors", {
         modal.querySelector(".modal-footer").appendChild(footer);
         const confirm = modal.querySelector("[data-modal-confirm]");
         let saving = false;
-        confirm.addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(confirm, async () => {
           if (saving) return;
           const fullName = $("#doc-name").value.trim();
           const specialization = $("#doc-spec").value.trim();
