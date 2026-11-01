@@ -163,7 +163,7 @@ window.ClinicFlow.registerRoute("queue", {
         <div id="token-patient-results" class="mb16"></div>
         <label class="field"><span>Doctor</span><select class="select" id="token-doctor">${doctors.map((doctor) => '<option value="' + window.ClinicFlow.escapeHtml(doctor.id) + '">' + window.ClinicFlow.escapeHtml(doctor.full_name) + '</option>').join("")}</select></label>
         <label class="field"><span>Visit type</span><select class="select" id="token-visit-type">
-          <option value="walk_in">Walk-in</option><option value="follow_up">Follow-up</option><option value="priority">Priority</option>${["clinic_admin","doctor","nurse"].includes(me.role && me.role.slug) ? '<option value="emergency">Emergency</option>' : ""}
+          <option value="walk_in">Walk-in</option><option value="priority">Priority</option>${["clinic_admin","doctor","nurse"].includes(me.role && me.role.slug) ? '<option value="emergency">Emergency</option>' : ""}
         </select></label>
         <label class="field"><span>Notes / reason (required for emergency)</span><textarea class="input" id="token-notes" rows="2"></textarea></label>
         <div id="token-form-error" role="alert" aria-live="polite" style="color:#b91c1c"></div>`;
