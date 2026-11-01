@@ -158,12 +158,12 @@ window.ClinicFlow.registerRoute("queue", {
       const modal = window.ClinicFlow.openModal({ title: "Generate patient token", wide: true });
       const body = document.createElement("div");
       body.innerHTML = `
-        <p class="muted small">Search by patient code (for example P000123) or name, then select the exact patient record.</p>
+        <p class="muted small">Search by patient code (for example P000123) or name, then select the exact patient record. For booked visits, use Appointments → Check in to link the token.</p>
         <label class="field"><span>Patient code / name</span><input class="input" id="token-patient-search" placeholder="Enter patient code or name" autocomplete="off"/></label>
         <div id="token-patient-results" class="mb16"></div>
         <label class="field"><span>Doctor</span><select class="select" id="token-doctor">${doctors.map((doctor) => '<option value="' + window.ClinicFlow.escapeHtml(doctor.id) + '">' + window.ClinicFlow.escapeHtml(doctor.full_name) + '</option>').join("")}</select></label>
         <label class="field"><span>Visit type</span><select class="select" id="token-visit-type">
-          <option value="walk_in">Walk-in</option><option value="appointment">Appointment check-in</option><option value="follow_up">Follow-up</option><option value="priority">Priority</option>${["clinic_admin","doctor","nurse"].includes(me.role && me.role.slug) ? '<option value="emergency">Emergency</option>' : ""}
+          <option value="walk_in">Walk-in</option><option value="follow_up">Follow-up</option><option value="priority">Priority</option>${["clinic_admin","doctor","nurse"].includes(me.role && me.role.slug) ? '<option value="emergency">Emergency</option>' : ""}
         </select></label>
         <label class="field"><span>Notes / reason (required for emergency)</span><textarea class="input" id="token-notes" rows="2"></textarea></label>
         <div id="token-form-error" role="alert" aria-live="polite" style="color:#b91c1c"></div>`;
