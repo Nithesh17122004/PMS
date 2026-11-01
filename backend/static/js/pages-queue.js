@@ -198,9 +198,16 @@ window.ClinicFlow.registerRoute("queue", {
       }, (error) => { errorBox.textContent = error.message || "Token could not be generated."; });
     };
 
-    if (can("tokens.create")) $("#queue-new").addEventListener("click", openGenerateModal);
+    const generateButton = $("#queue-new");
+    const syncGenerateButton = () => {
+      if (!generateButton) return;
+      generateButton.disabled = dateInput.value !== localToday;
+      generateButton.title = generateButton.disabled ? "Tokens can only be generated for today." : "Generate a walk-in token.";
+    };
+    if (can("tokens.create") && generateButton) generateButton.addEventListener("click", openGenerateModal);
     $("#queue-refresh").addEventListener("click", renderBoard);
-    dateInput.addEventListener("change", renderBoard);
+    dateInput.addEventListener("change", () => { syncGenerateButton(); renderBoard(); });
+    syncGenerateButton();
     await renderBoard();
   },
 });
