@@ -128,7 +128,7 @@ window.ClinicFlow.registerRoute("settings", {
     document.querySelector("#staff-status").addEventListener("change", reloadStaff);
 
     // Create non-doctor staff accounts. Doctor logins and profiles are created together in Doctors.
-    document.querySelector("#staff-new").addEventListener("click", () => {
+    document.querySelector("#staff-new")?.addEventListener("click", () => {
       const modal = window.ClinicFlow.openModal({ title: "Add staff", wide: true });
       const body = document.createElement("div");
       body.innerHTML = `
