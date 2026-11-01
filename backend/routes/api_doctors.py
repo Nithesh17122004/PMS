@@ -139,7 +139,12 @@ def create_doctor():
     specialization = (payload.get("specialization") or "").strip()
     if not full_name or not specialization:
         raise ValidationError("Doctor name and specialization are required.")
-    email = normalize_email(payload.get("email"))
+    email_value = payload.get("email")
+    if email_value not in (None, "") and not isinstance(email_value, str):
+        raise ValidationError("Doctor login email must be a valid email address.")
+    email = normalize_email(email_value)
+    if email and (len(email) > 190 or "@" not in email or any(ch.isspace() for ch in email)):
+        raise ValidationError("Doctor login email must be a valid email address.")
     temp_password = None
     user = None
     if email:
@@ -169,8 +174,11 @@ def create_doctor():
             )
             db.session.add(user)
             db.session.flush()
-        elif user.doctor_profile:
-            raise ConflictError("This user already has a doctor profile.")
+        else:
+            if user.role is None or user.role.slug != "doctor":
+                raise ValidationError("That email belongs to a non-doctor account. Use a new email to create a doctor login.")
+            if user.doctor_profile:
+                raise ConflictError("This user already has a doctor profile.")
     number = next_document_number(clinic.id, "doctor")
     doctor = Doctor(
         clinic_id=clinic.id,
@@ -289,10 +297,15 @@ def delete_schedule(doctor_id, schedule_id):
 
 
 def _schedule_from_payload(doctor, payload):
-    try:
-        weekday = int(payload.get("weekday"))
-    except (TypeError, ValueError):
+    raw_weekday = payload.get("weekday")
+    if raw_weekday in (None, "") or isinstance(raw_weekday, bool):
         raise ValidationError("Weekday is required.")
+    if isinstance(raw_weekday, float) and not raw_weekday.is_integer():
+        raise ValidationError("Weekday must be a whole number from Monday (0) to Sunday (6).")
+    try:
+        weekday = int(raw_weekday)
+    except (TypeError, ValueError):
+        raise ValidationError("Weekday must be a whole number from Monday (0) to Sunday (6).")
     if weekday < 0 or weekday > 6:
         raise ValidationError("Weekday must be between Monday and Sunday.")
     start = parse_time(payload.get("start_time"), "Start time")
@@ -308,10 +321,15 @@ def _schedule_from_payload(doctor, payload):
             raise ValidationError("Break end must be after break start.")
         if break_start < start or break_end > end:
             raise ValidationError("Break must be within working hours.")
+    raw_slot_minutes = payload.get("slot_minutes")
+    if raw_slot_minutes in (None, ""):
+        raw_slot_minutes = 15
+    if isinstance(raw_slot_minutes, bool) or (isinstance(raw_slot_minutes, float) and not raw_slot_minutes.is_integer()):
+        raise ValidationError("Slot duration must be a whole number.")
     try:
-        slot_minutes = int(payload.get("slot_minutes") or 15)
+        slot_minutes = int(raw_slot_minutes)
     except (TypeError, ValueError):
-        raise ValidationError("Slot duration must be a number.")
+        raise ValidationError("Slot duration must be a whole number.")
     if slot_minutes < 5 or slot_minutes > 240:
         raise ValidationError("Slot duration must be between 5 and 240 minutes.")
     max_tokens = payload.get("max_tokens")
@@ -339,6 +357,8 @@ def _schedule_from_payload(doctor, payload):
 
 
 def _ensure_no_schedule_overlap(doctor, schedule, exclude_id=None):
+    if not schedule.is_active:
+        return
     query = DoctorSchedule.query.filter(
         DoctorSchedule.doctor_id == doctor.id,
         DoctorSchedule.weekday == schedule.weekday,
