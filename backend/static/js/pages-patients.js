@@ -146,10 +146,10 @@ window.ClinicFlow.registerRoute("patient", {
       <div class="grid cols-3">
         <div class="card"><div class="card-header"><div class="card-title">Contact</div></div><div class="card-body">
           <dl class="kv">
-            <dt>Phone</dt><dd>${window.ClinicFlow.escapeHtml(p.phone_masked || p.phone || "—")}</dd>
+            <dt>Phone</dt><dd>${window.ClinicFlow.escapeHtml(p.phone || p.phone_masked || "—")}</dd>
             <dt>Email</dt><dd>${window.ClinicFlow.escapeHtml(p.email ? p.email : "—")}</dd>
-            <dt>Address</dt><dd>${[p.address_line1, p.city, p.state, p.country].filter(Boolean).join(", ") || "—"}</dd>
-            <dt>Emergency</dt><dd>${[p.emergency_contact_name, p.emergency_contact_phone].filter(Boolean).join(" · ") || "—"}</dd>
+            <dt>Address</dt><dd>${[p.address_line1, p.address_line2, p.city, p.state, p.postal_code, p.country].filter(Boolean).join(", ") || "—"}</dd>
+            <dt>Emergency</dt><dd>${[p.emergency_contact_name, p.emergency_contact_relation, p.emergency_contact_phone].filter(Boolean).join(" · ") || "—"}</dd>
           </dl>
         </div></div>
         <div class="card"><div class="card-header"><div class="card-title">Clinical</div></div><div class="card-body">
@@ -158,6 +158,15 @@ window.ClinicFlow.registerRoute("patient", {
             <dt>Date of birth</dt><dd>${window.ClinicFlow.fmtDate(p.date_of_birth)}</dd>
             <dt>Blood group</dt><dd>${p.blood_group || "—"}</dd>
             <dt>Allergies</dt><dd>${window.ClinicFlow.escapeHtml(p.allergies || "—")}</dd>
+            <dt>Medical history</dt><dd style="white-space:pre-wrap">${window.ClinicFlow.escapeHtml(p.medical_history || "—")}</dd>
+            <dt>Patient notes</dt><dd style="white-space:pre-wrap">${window.ClinicFlow.escapeHtml(p.notes || "—")}</dd>
+            <dt>Alternate phone</dt><dd>${window.ClinicFlow.escapeHtml(p.alternate_phone || "—")}</dd>
+            <dt>Preferred contact</dt><dd>${window.ClinicFlow.escapeHtml(p.preferred_contact || "—")}</dd>
+            <dt>Email consent</dt><dd>${p.consent_email ? "Yes" : "No"}</dd>
+            <dt>SMS consent</dt><dd>${p.consent_sms ? "Yes" : "No"}</dd>
+            <dt>WhatsApp consent</dt><dd>${p.consent_whatsapp ? "Yes" : "No"}</dd>
+            <dt>Registered</dt><dd>${window.ClinicFlow.fmtDateTime(p.created_at)}</dd>
+            <dt>Last updated</dt><dd>${window.ClinicFlow.fmtDateTime(p.updated_at)}</dd>
           </dl>
         </div></div>
         <div class="card"><div class="card-header"><div class="card-title">Activity</div></div><div class="card-body">
