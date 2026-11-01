@@ -2,7 +2,7 @@ window.ClinicFlow.registerRoute("notifications", {
   async render() {
     const host = document.querySelector("#page-content");
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-    const items = await window.ClinicFlow.apiGet("/api/notifications");
+    const items = await window.ClinicFlow.apiGet("/api/notifications").catch(() => []);
     const list = items || [];
     host.innerHTML = `
       <div class="page-head">

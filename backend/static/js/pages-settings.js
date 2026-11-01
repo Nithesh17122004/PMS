@@ -2,12 +2,12 @@ window.ClinicFlow.registerRoute("settings", {
   async render() {
     const host = document.querySelector("#page-content");
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-    const clinic = await window.ClinicFlow.apiGet("/api/clinic");
-    const c = clinic.clinic || clinic || {};
-    const staff = await window.ClinicFlow.apiGet("/api/clinic/staff");
-    const roles = await window.ClinicFlow.apiGet("/api/clinic/roles");
-    const perms = await window.ClinicFlow.apiGet("/api/clinic/permissions");
-    const audit = await window.ClinicFlow.apiGet("/api/clinic/audit-logs");
+    const clinic = await window.ClinicFlow.apiGet("/api/clinic").catch(() => null);
+    const c = (clinic && (clinic.clinic || clinic)) || {};
+    const staff = await window.ClinicFlow.apiGet("/api/clinic/staff").catch(() => []);
+    const roles = await window.ClinicFlow.apiGet("/api/clinic/roles").catch(() => []);
+    const perms = await window.ClinicFlow.apiGet("/api/clinic/permissions").catch(() => ({ groups: {}, permissions: [] }));
+    const audit = await window.ClinicFlow.apiGet("/api/clinic/audit-logs").catch(() => []);
     const roleList = roles || [];
     const permGroups = (perms && perms.groups) || {};
     const allPerms = (perms && perms.permissions) || [];

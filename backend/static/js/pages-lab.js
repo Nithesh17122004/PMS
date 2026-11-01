@@ -2,8 +2,8 @@ window.ClinicFlow.registerRoute("lab", {
   async render() {
     const host = document.querySelector("#page-content");
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-    const tests = await window.ClinicFlow.apiGet("/api/lab/tests");
-    const orders = await window.ClinicFlow.apiGet("/api/lab/orders");
+    const tests = await window.ClinicFlow.apiGet("/api/lab/tests").catch(() => []);
+    const orders = await window.ClinicFlow.apiGet("/api/lab/orders").catch(() => []);
     const testList = tests || [];
     const orderList = orders || [];
     host.innerHTML = `
@@ -55,7 +55,7 @@ window.ClinicFlow.registerRoute("lab", {
         const body = document.createElement("div");
         body.innerHTML = `
           <div class="form-grid">
-            <label class="field full"><span>Patient</span><input class="class=\"input\" id="lab-patient" placeholder="Search patient"/></label>
+            <label class="field full"><span>Patient</span><input class="input" id="lab-patient" placeholder="Search patient"/></label>
             <label class="field full"><span>Test selection (IDs)</span><input class="input" id="lab-tests" placeholder="test-id-1,test-id-2"/></label>
           </div>`;
         modal.querySelector(".modal-body").appendChild(body);

@@ -2,8 +2,8 @@ window.ClinicFlow.registerRoute("pharmacy", {
   async render() {
     const host = document.querySelector("#page-content");
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-    const alerts = await window.ClinicFlow.apiGet("/api/pharmacy/alerts");
-    const meds = await window.ClinicFlow.apiGet("/api/pharmacy/medications");
+    const alerts = await window.ClinicFlow.apiGet("/api/pharmacy/alerts").catch(() => ({}));
+    const meds = await window.ClinicFlow.apiGet("/api/pharmacy/medications").catch(() => []);
     const alertData = alerts || {};
     const medList = meds || [];
     host.innerHTML = `

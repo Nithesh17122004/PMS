@@ -17,9 +17,11 @@ window.ClinicFlow.registerRoute("queue", {
       <div class="card mt16"><div class="card-header"><div class="card-title">Queue actions</div><div class="card-body" id="queue-actions"></div></div></div>
     `;
     const load = async () => {
-      const q = new URLSearchParams(window.ClinicFlow.doctorQuery());
-      const res = await window.ClinicFlow.apiGet("/api/tokens/queue?" + q.toString());
-      return res || {};
+      try {
+        const q = new URLSearchParams(window.ClinicFlow.doctorQuery());
+        const res = await window.ClinicFlow.apiGet("/api/tokens/queue?" + q.toString());
+        return res || {};
+      } catch (e) { window.ClinicFlow.toast(e.message, "error"); return {}; }
     };
     const renderAll = async () => {
       const data = await load();

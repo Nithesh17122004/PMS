@@ -350,6 +350,8 @@ window.ClinicFlow.App = {
     return { key, parts, query: new URLSearchParams(query || "") };
   }
 
+  let lastNavHash = null;
+
   async function navigate(path, params) {
     if (params) {
       const url = new URLSearchParams(location.hash.split("?")[1] || "");
@@ -358,8 +360,11 @@ window.ClinicFlow.App = {
     } else {
       location.hash = "#" + path;
     }
+    lastNavHash = location.hash;
     await routeChange();
   }
+
+  let navToken = 0;
 
   async function routeChange() {
     const { key, parts } = currentPath();
@@ -368,16 +373,41 @@ window.ClinicFlow.App = {
     const subEl = document.querySelector("#page-sub");
     if (titleEl) titleEl.textContent = titleFor(key);
     if (subEl) subEl.textContent = subtitleFor(key);
-    if (routes[key]) {
-      state.routeParams = Object.fromEntries(parts.slice(1).map((p, i) => [parts[i - 1] || "id", p]));
-      await routes[key].render(state.routeParams);
-    } else if (key === "prescriptions") {
-      await routes["consultations"].render(state.routeParams);
+    // Update sidebar active state
+    document.querySelectorAll("[data-nav]").forEach((el) => {
+      el.classList.toggle("active", el.getAttribute("data-nav") === key);
+    });
+    const myToken = ++navToken;
+    const host = document.querySelector("#page-content");
+    if (!host) return;
+    host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
+    try {
+      if (routes[key]) {
+        state.routeParams = Object.fromEntries(parts.slice(1).map((p, i) => [parts[i - 1] || "id", p]));
+        await routes[key].render(state.routeParams);
+      } else if (key === "prescriptions") {
+        await routes["consultations"].render(state.routeParams);
+      } else {
+        host.innerHTML = '<div class="empty-state"><div class="empty-title">Page not found</div><div class="empty-sub">The requested page does not exist.</div></div>';
+      }
+    } catch (e) {
+      if (myToken !== navToken) return;
+      const msg = (e && e.message) ? e.message : "Please try again.";
+      host.innerHTML = '<div class="empty-state"><div class="empty-title">Something went wrong</div><div class="empty-sub">' + escapeHtml(msg) + '</div><button class="btn mt16" onclick="window.ClinicFlow.navigate(window.location.hash || \'#/dashboard\')">Retry</button></div>';
     }
+    const overlay = host.querySelector(".loading-overlay");
+    if (overlay) overlay.remove();
   }
 
   function subscribeRouting() {
-    window.addEventListener("hashchange", () => { routeChange(); });
+    window.addEventListener("hashchange", () => {
+      if (lastNavHash && location.hash === lastNavHash) {
+        lastNavHash = null;
+        return;
+      }
+      lastNavHash = null;
+      routeChange();
+    });
   }
 
   /* Shell rendering */

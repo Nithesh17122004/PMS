@@ -2,7 +2,12 @@ window.ClinicFlow.registerRoute("admin", {
   async render() {
     const host = document.querySelector("#page-content");
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-    const data = await window.ClinicFlow.apiGet("/api/admin/dashboard");
+    let data = {};
+    try {
+      data = (await window.ClinicFlow.apiGet("/api/admin/dashboard")) || {};
+    } catch (e) {
+      window.ClinicFlow.toast(e.message, "error");
+    }
     const d = data || {};
     host.innerHTML = `
       <div class="page-head"><div><div class="page-title">Platform</div><div class="page-sub">Clinics and operations</div></div></div>
@@ -14,22 +19,27 @@ window.ClinicFlow.registerRoute("admin", {
       </div>
       <div class="card mt16"><div class="card-header"><div class="card-title">Clinics</div><div class="card-body table-wrap"><table class="table"><thead><tr><th>Name</th><th>Slug</th><th>Plan</th><th>Status</th><th></th></tr></thead><tbody id="admin-clinic-tbody"></tbody></table></div></div></div>
     `;
-    const clinics = (d.clinics || []);
-    $("#admin-clinic-tbody").innerHTML = clinics.map((cl) => `
-      <tr>
-        <td><b>${window.ClinicFlow.escapeHtml(cl.name)}</b><div class="muted small">${window.ClinicFlow.escapeHtml(cl.city || "")}</div></td>
-        <td class="mono">${window.ClinicFlow.escapeHtml(cl.slug)}</td>
-        <td>${window.ClinicFlow.escapeHtml(cl.plan || "")}</td>
-        <td>${window.ClinicFlow.statusBadge(cl.is_active ? "active" : "inactive")}</td>
-        <td class="right"><button class="btn btn-sm" data-view="${cl.id}">Manage</button></td>
-      </tr>`).join("");
-    $("#admin-clinic-tbody").addEventListener("click", async (e) => {
-      const btn = e.target.closest("[data-view]");
-      if (!btn) return;
-      const id = btn.getAttribute("data-view");
-      const res = await window.ClinicFlow.apiGet("/api/admin/clinics/" + id);
-      const cl = res.clinic || {};
-      window.ClinicFlow.toast(cl.name || "Clinic", "info");
-    });
+    const tbody = document.querySelector("#admin-clinic-tbody");
+    const clinics = d.clinics || [];
+    if (tbody) {
+      tbody.innerHTML = clinics.map((cl) => `
+        <tr>
+          <td><b>${window.ClinicFlow.escapeHtml(cl.name)}</b><div class="muted small">${window.ClinicFlow.escapeHtml(cl.city || "")}</div></td>
+          <td class="mono">${window.ClinicFlow.escapeHtml(cl.slug)}</td>
+          <td>${window.ClinicFlow.escapeHtml(cl.plan || "")}</td>
+          <td>${window.ClinicFlow.statusBadge(cl.is_active ? "active" : "inactive")}</td>
+          <td class="right"><button class="btn btn-sm" data-view="${cl.id}">Manage</button></td>
+        </tr>`).join("");
+      tbody.addEventListener("click", async (e) => {
+        const btn = e.target.closest("[data-view]");
+        if (!btn) return;
+        const id = btn.getAttribute("data-view");
+        try {
+          const res = await window.ClinicFlow.apiGet("/api/admin/clinics/" + id);
+          const cl = res.clinic || {};
+          window.ClinicFlow.toast(cl.name || "Clinic", "info");
+        } catch (err) { window.ClinicFlow.toast(err.message, "error"); }
+      });
+    }
   },
 });

@@ -2,7 +2,7 @@ window.ClinicFlow.registerRoute("dashboard", {
   async render() {
     const host = document.querySelector("#page-content");
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
-    const data = await window.ClinicFlow.apiGet("/api/dashboard");
+    const data = await window.ClinicFlow.apiGet("/api/dashboard").catch(() => ({}));
     const d = data || {};
     const stats = d.stats || {};
     const charts = d.charts || {};
