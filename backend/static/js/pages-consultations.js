@@ -94,40 +94,51 @@ window.ClinicFlow.registerRoute("consultation", {
         <button class="btn btn-primary" id="consult-complete-btn">Complete</button>
       </div>
     `;
-    const save = async () => {
-      const payload = {
+    const collectPayload = () => {
+      let diagnoses;
+      let vitals;
+      try { diagnoses = JSON.parse($("#cf-icd").value || "[]"); }
+      catch (error) { throw new Error("Diagnoses must be valid JSON."); }
+      if (!Array.isArray(diagnoses)) throw new Error("Diagnoses must be a JSON list.");
+      try { vitals = JSON.parse($("#cf-vitals").value || "{}"); }
+      catch (error) { throw new Error("Vitals must be valid JSON."); }
+      if (!vitals || typeof vitals !== "object" || Array.isArray(vitals)) throw new Error("Vitals must be a JSON object.");
+      const followUp = $("#cf-followup").checked;
+      const followUpDate = $("#cf-followup-date").value;
+      if (followUp && !followUpDate) throw new Error("Select a follow-up date before completing.");
+      return {
         symptoms: $("#cf-symptoms").value,
+        observations: $("#cf-observations").value,
+        vitals,
         diagnosis_summary: $("#cf-diagnosis").value,
         treatment_plan: $("#cf-treatment").value,
         doctor_notes: $("#cf-notes").value,
-        follow_up_required: $("#cf-followup").checked,
-        follow_up_date: $("#cf-followup-date").value,
+        diagnoses,
+        follow_up_required: followUp,
+        follow_up_date: followUpDate,
         follow_up_instructions: $("#cf-treatment").value,
         follow_up_priority: $("#cf-followup-priority").value,
       };
-      let diagnoses = [];
-      try { diagnoses = JSON.parse($("#cf-icd").value || "[]"); } catch (e) { diagnoses = []; }
-      payload.diagnoses = diagnoses;
-      const vitals = {};
-      try { const parsed = JSON.parse($("#cf-vitals").value || "{}"); Object.assign(vitals, parsed); } catch (e) {}
-      if (Object.keys(vitals).length) payload.vitals = vitals;
-      await window.ClinicFlow.apiPut("/api/consultations/" + id, payload);
-      window.ClinicFlow.toast("Draft saved", "ok");
-      window.ClinicFlow.closeModal();
+    };
+    const save = async () => {
+      try {
+        await window.ClinicFlow.apiPut("/api/consultations/" + id, collectPayload());
+        window.ClinicFlow.toast("Draft saved.", "ok");
+      } catch (error) {
+        window.ClinicFlow.toast(error.message || "Draft could not be saved.", "error");
+      }
     };
     if (host.querySelector("#consult-save")) host.querySelector("#consult-save").addEventListener("click", save);
     if (host.querySelector("#consult-complete-btn")) host.querySelector("#consult-complete-btn").addEventListener("click", async () => {
-      const payload = {
-        diagnosis_summary: $("#cf-diagnosis").value,
-        treatment_plan: $("#cf-treatment").value,
-        follow_up_required: $("#cf-followup").checked,
-        follow_up_date: $("#cf-followup-date").value,
-        follow_up_instructions: $("#cf-treatment").value,
-        follow_up_priority: $("#cf-followup-priority").value,
-      };
-      const res = await window.ClinicFlow.apiPost("/api/consultations/" + id + "/complete", payload);
-      window.ClinicFlow.toast("Consultation completed", "ok");
-      await window.ClinicFlow.navigate("#/consultation/" + res.consultation.id);
+      const button = host.querySelector("#consult-complete-btn");
+      button.disabled = true;
+      try {
+        const result = await window.ClinicFlow.apiPost("/api/consultations/" + id + "/complete", collectPayload());
+        window.ClinicFlow.toast("Consultation completed.", "ok");
+        await window.ClinicFlow.navigate("#/consultation/" + result.consultation.id);
+      } catch (error) {
+        window.ClinicFlow.toast(error.message || "Consultation could not be completed.", "error");
+      } finally { if (button.isConnected) button.disabled = false; }
     });
     if (host.querySelector("#consult-invoice")) host.querySelector("#consult-invoice").addEventListener("click", async () => {
       const res = await window.ClinicFlow.apiPost("/api/consultations/" + id + "/invoice");
