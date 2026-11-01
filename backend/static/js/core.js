@@ -353,6 +353,8 @@ window.ClinicFlow.App = {
   let lastNavHash = null;
 
   async function navigate(path, params) {
+    path = String(path || "").replace(/^#+/, "");
+    if (!path.startsWith("/")) path = "/" + path;
     if (params) {
       const url = new URLSearchParams(location.hash.split("?")[1] || "");
       Object.entries(params).forEach(([k, v]) => url.set(k, v));
