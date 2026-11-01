@@ -139,3 +139,19 @@ def test_receptionist_can_generate_and_call_doctor_queue(client, clinic, clinic_
     recalled = client.post(f"/api/tokens/{token_id}/recall")
     assert recalled.status_code == 200, recalled.get_json()
     assert recalled.get_json()["data"]["token"]["status"] == "recalled"
+
+def test_receptionist_queue_board_includes_each_doctor_and_next_patient(client, clinic, clinic_admin, receptionist, doctor):
+    login(client, "reception@clinic.test")
+    patient = create_patient(clinic, clinic_admin, first_name="Board", phone="+919000000097")
+    created = client.post(
+        "/api/tokens",
+        json={"patient_id": patient.id, "doctor_id": doctor.id},
+    )
+    assert created.status_code == 201, created.get_json()
+
+    response = client.get("/api/tokens/queue")
+    assert response.status_code == 200, response.get_json()
+    queues = response.get_json()["data"]["queues"]
+    doctor_queue = next(queue for queue in queues if queue["doctor"]["id"] == doctor.id)
+    assert doctor_queue["counts"]["waiting"] == 1
+    assert doctor_queue["next"]["patient"]["patient_code"] == patient.patient_code
