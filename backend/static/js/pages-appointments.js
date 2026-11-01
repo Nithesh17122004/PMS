@@ -82,7 +82,7 @@ window.ClinicFlow.registerRoute("appointments", {
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Book</button>';
       modal.querySelector(".modal-footer").appendChild(footer);
-      modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+      window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
         const patientTerm = $("#appt-patient").value.trim();
         let patientId = null;
         if (patientTerm) {
@@ -140,7 +140,7 @@ window.ClinicFlow.registerRoute("appointments", {
         const footer = document.createElement("div");
         footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Reschedule</button>';
         modal.querySelector(".modal-footer").appendChild(footer);
-        modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
           await window.ClinicFlow.apiPost("/api/appointments/" + id + "/reschedule", {
             appointment_date: $("#appt-new-date").value,
             start_time: $("#appt-new-start").value,
