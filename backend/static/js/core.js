@@ -627,12 +627,12 @@ window.ClinicFlow.App = {
       if (typeof onSelect === "function") onSelect(null);
       if (timer) clearTimeout(timer);
       const term = input.value.trim();
+      const thisRequest = ++requestId;
       if (term.length < 2) {
         results.innerHTML = term ? '<div class="muted small">Enter at least 2 characters or a patient code.</div>' : "";
         return;
       }
       results.innerHTML = '<div class="muted small">Searching patients…</div>';
-      const thisRequest = ++requestId;
       timer = setTimeout(async () => {
         try {
           const response = await apiPost("/api/patients/search", { query: term, limit: 10 });
