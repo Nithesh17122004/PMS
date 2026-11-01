@@ -177,7 +177,7 @@ window.ClinicFlow.registerRoute("prescriptions", {
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><a class="btn btn-primary" href="/api/prescriptions/' + id + '/pdf" target="_blank">Download PDF</a>';
       modal.querySelector(".modal-footer").appendChild(footer);
-      modal.querySelector("[data-modal-cancel]").addEventListener("click", () => window.ClinicFlow.closeModal());
+
     });
   },
 });
