@@ -374,12 +374,10 @@ window.ClinicFlow.App = {
     } else if (key === "prescriptions") {
       await routes["consultations"].render(state.routeParams);
     }
-    window.dispatchEvent(new CustomEvent("clinicflow:navigate", { detail: { key } }));
   }
 
   function subscribeRouting() {
     window.addEventListener("hashchange", () => { routeChange(); });
-    window.addEventListener("clinicflow:navigate", () => { routeChange(); });
   }
 
   /* Shell rendering */
