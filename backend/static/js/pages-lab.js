@@ -47,7 +47,7 @@ window.ClinicFlow.registerRoute("lab", {
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Close</button><a class="btn btn-primary" href="/api/lab/orders/" + id + "/pdf" target="_blank">Report PDF</a>';
       modal.querySelector(".modal-footer").appendChild(footer);
-      modal.querySelector("[data-modal-cancel]").addEventListener("click", () => window.ClinicFlow.closeModal());
+
     });
     if ($("#lab-new")) {
       $("#lab-new").addEventListener("click", async () => {
