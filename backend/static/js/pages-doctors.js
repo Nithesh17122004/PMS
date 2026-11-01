@@ -44,14 +44,14 @@ window.ClinicFlow.registerRoute("doctors", {
         </div>
         <div class="divider"></div>
         <div class="row wrap">
-          \${window.ClinicFlow.state.user.permissions.includes("doctors.manage") ? '<button class="btn btn-primary" id="doctor-edit">Edit details</button>' : ""}
-          \${window.ClinicFlow.state.user.permissions.includes("doctors.manage") ? (d.user_id ? '<button class="btn" id="doctor-password">Reset login password</button>' : '<button class="btn" id="doctor-create-login">Create login</button>') : ""}
-          \${window.ClinicFlow.state.user.permissions.includes("doctors.manage") ? '<button class="btn btn-danger" id="doctor-delete">Delete doctor profile</button>' : ""}
+          ${window.ClinicFlow.state.user.permissions.includes("doctors.manage") ? '<button class="btn btn-primary" id="doctor-edit">Edit details</button>' : ""}
+          ${window.ClinicFlow.state.user.permissions.includes("doctors.manage") ? (d.user_id ? '<button class="btn" id="doctor-password">Reset login password</button>' : '<button class="btn" id="doctor-create-login">Create login</button>') : ""}
+          ${window.ClinicFlow.state.user.permissions.includes("doctors.manage") ? '<button class="btn btn-danger" id="doctor-delete">Delete doctor profile</button>' : ""}
           <button class="btn" id="doctor-leave-new">Add leave</button>
           <button class="btn" id="doctor-schedule-new">Add schedule</button>
           <button class="btn" id="doctor-queue-link">Open queue</button>
         </div>
-        <div class="muted small mt8">Login account: \${window.ClinicFlow.escapeHtml(d.email || "No login account linked")}</div>
+        <div class="muted small mt8">Login account: ${window.ClinicFlow.escapeHtml(d.email || "No login account linked")}</div>
       `;
       modal.querySelector(".modal-body").appendChild(body);
       const footer = document.createElement("div");
