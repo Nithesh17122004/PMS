@@ -62,7 +62,7 @@ window.ClinicFlow.registerRoute("lab", {
         const footer = document.createElement("div");
         footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Create order</button>';
         modal.querySelector(".modal-footer").appendChild(footer);
-        modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
           const ids = ($("#lab-tests").value || "").split(",").map((s) => s.trim()).filter(Boolean);
           const res = await window.ClinicFlow.apiPost("/api/lab/orders", { patient_id: $("#lab-patient").value.trim(), test_ids: ids });
           window.ClinicFlow.toast("Lab order created", "ok");
