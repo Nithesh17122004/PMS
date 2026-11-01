@@ -43,12 +43,98 @@ window.ClinicFlow.registerRoute("doctors", {
           <div><div class="muted small">Available</div><b>${d.is_available ? "Yes" : "No"}</b></div>
         </div>
         <div class="divider"></div>
-        <div class="row"><button class="btn" id="doctor-leave-new">Add leave</button><button class="btn" id="doctor-schedule-new">Add schedule</button><button class="btn" id="doctor-queue-link">Open queue</button></div>
+        <div class="row wrap">
+          ${window.ClinicFlow.state.user.permissions.includes("doctors.manage") ? '<button class="btn btn-primary" id="doctor-edit">Edit details</button>' : ""}
+          ${window.ClinicFlow.state.user.permissions.includes("doctors.manage") ? (d.user_id ? '<button class="btn" id="doctor-password">Reset login password</button>' : '<button class="btn" id="doctor-create-login">Create login</button>') : ""}
+          ${window.ClinicFlow.state.user.permissions.includes("doctors.manage") ? '<button class="btn btn-danger" id="doctor-delete">Delete doctor profile</button>' : ""}
+          <button class="btn" id="doctor-leave-new">Add leave</button>
+          <button class="btn" id="doctor-schedule-new">Add schedule</button>
+          <button class="btn" id="doctor-queue-link">Open queue</button>
+        </div>
+        <div class="muted small mt8">Login account: ${window.ClinicFlow.escapeHtml(d.email || "No login account linked")}</div>
       `;
       modal.querySelector(".modal-body").appendChild(body);
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Close</button>';
       modal.querySelector(".modal-footer").appendChild(footer);
+      const canManageDoctor = window.ClinicFlow.state.user.permissions.includes("doctors.manage");
+      if (canManageDoctor && modal.querySelector("#doctor-edit")) {
+        modal.querySelector("#doctor-edit").addEventListener("click", async () => {
+          const name = prompt("Doctor name:", d.full_name || "");
+          if (name === null) return;
+          const specialization = prompt("Specialization:", d.specialization || "");
+          if (specialization === null) return;
+          const room = prompt("Room number:", d.room_number || "");
+          if (room === null) return;
+          const fee = prompt("Consultation fee:", String(d.consultation_fee ?? 0));
+          if (fee === null) return;
+          const followUpFee = prompt("Follow-up fee:", String(d.follow_up_fee ?? 0));
+          if (followUpFee === null) return;
+          const qualifications = prompt("Qualifications:", d.qualifications || "");
+          if (qualifications === null) return;
+          const registration = prompt("Registration number:", d.registration_number || "");
+          if (registration === null) return;
+          const experience = prompt("Experience in years:", String(d.experience_years ?? 0));
+          if (experience === null) return;
+          const bio = prompt("Short biography:", d.bio || "");
+          if (bio === null) return;
+          const available = confirm("Is this doctor available for appointments?");
+          const active = confirm("Keep this doctor profile active?");
+          if (!name.trim() || !specialization.trim() || !Number.isFinite(Number(fee)) || Number(fee) < 0 || !Number.isFinite(Number(followUpFee)) || Number(followUpFee) < 0 || !Number.isInteger(Number(experience)) || Number(experience) < 0) {
+            window.ClinicFlow.toast("Enter a doctor name, specialization and valid non-negative fees.", "error");
+            return;
+          }
+          try {
+            await window.ClinicFlow.apiPut("/api/doctors/" + id, {
+              full_name: name.trim(), specialization: specialization.trim(),
+              room_number: room.trim() || null,
+              qualifications: qualifications.trim() || null,
+              registration_number: registration.trim() || null,
+              experience_years: Number(experience),
+              bio: bio.trim() || null,
+              is_available: available,
+              is_active: active,
+              consultation_fee: Number(fee), follow_up_fee: Number(followUpFee),
+            });
+            window.ClinicFlow.toast("Doctor details updated.", "ok");
+            window.ClinicFlow.closeModal(modal);
+            await window.ClinicFlow.navigate("#/doctors");
+          } catch (error) { window.ClinicFlow.toast(error.message || "Doctor details could not be saved.", "error"); }
+        });
+      }
+      if (canManageDoctor && modal.querySelector("#doctor-create-login")) {
+        modal.querySelector("#doctor-create-login").addEventListener("click", async () => {
+          const email = prompt("Doctor login email:");
+          if (!email) return;
+          try {
+            const result = await window.ClinicFlow.apiPost("/api/doctors/" + id + "/login", { email: email.trim() });
+            if (result.temporary_password) window.prompt("Temporary doctor password (copy now):", result.temporary_password);
+            window.ClinicFlow.toast("Doctor login created.", "ok");
+            window.ClinicFlow.closeModal(modal);
+            await window.ClinicFlow.navigate("#/doctors");
+          } catch (error) { window.ClinicFlow.toast(error.message || "Doctor login could not be created.", "error"); }
+        });
+      }
+      if (canManageDoctor && modal.querySelector("#doctor-password")) {
+        modal.querySelector("#doctor-password").addEventListener("click", () => {
+          window.ClinicFlow.confirmDialog("Generate a temporary password for this doctor? The current password will stop working.", async () => {
+            const result = await window.ClinicFlow.apiPost("/api/doctors/" + id + "/reset-password", {});
+            if (result.temporary_password) window.prompt("Temporary doctor password (copy now):", result.temporary_password);
+            window.ClinicFlow.toast("Doctor password reset.", "ok");
+          }, null, "Reset password");
+        });
+      }
+      if (canManageDoctor && modal.querySelector("#doctor-delete")) {
+        modal.querySelector("#doctor-delete").addEventListener("click", () => {
+          window.ClinicFlow.confirmDialog("Permanently delete this doctor profile? Deletion is blocked when linked clinical records exist.", async () => {
+            await window.ClinicFlow.apiDelete("/api/doctors/" + id);
+            window.ClinicFlow.toast("Doctor profile deleted.", "ok");
+            window.ClinicFlow.closeModal(modal);
+            await window.ClinicFlow.navigate("#/doctors");
+          }, null, "Delete doctor");
+        });
+      }
+
       modal.querySelector("#doctor-leave-new").addEventListener("click", () => {
         const modal2 = window.ClinicFlow.openModal({ title: "Add leave", wide: true });
         const body2 = document.createElement("div");

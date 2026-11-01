@@ -303,3 +303,69 @@ def test_admin_cannot_use_staff_password_route_on_own_account(client, clinic_adm
         json={"password": "AdminSet@12345", "require_change": False},
     )
     assert response.status_code == 403
+
+def test_doctor_login_can_be_created_and_password_reset(client, clinic_admin, db):
+    login(client, "admin@clinic.test")
+    created = client.post(
+        "/api/doctors",
+        json={"full_name": "Dr No Login", "specialization": "General Medicine"},
+    )
+    assert created.status_code == 201, created.get_json()
+    doctor_id = created.get_json()["data"]["doctor"]["id"]
+
+    linked = client.post(
+        f"/api/doctors/{doctor_id}/login",
+        json={"email": "dr.no.login@example.test"},
+    )
+    assert linked.status_code == 201, linked.get_json()
+    temporary_password = linked.get_json()["data"]["temporary_password"]
+    user = User.query.filter_by(email="dr.no.login@example.test").one()
+    assert user.doctor_profile.id == doctor_id
+    assert verify_password(temporary_password, user.password_hash)
+    assert user.must_change_password is True
+
+    reset = client.post(f"/api/doctors/{doctor_id}/reset-password", json={})
+    assert reset.status_code == 200, reset.get_json()
+    reset_password = reset.get_json()["data"]["temporary_password"]
+    assert verify_password(reset_password, user.password_hash)
+    assert user.failed_login_attempts == 0
+    assert user.locked_until is None
+
+
+def test_doctor_profile_can_be_deleted_only_without_clinical_history(client, clinic_admin, db):
+    login(client, "admin@clinic.test")
+    created = client.post(
+        "/api/doctors",
+        json={"full_name": "Dr Remove Me", "specialization": "General Medicine"},
+    )
+    assert created.status_code == 201, created.get_json()
+    doctor_id = created.get_json()["data"]["doctor"]["id"]
+    schedule = client.post(
+        f"/api/doctors/{doctor_id}/schedules",
+        json=_schedule_payload(weekday=0),
+    )
+    assert schedule.status_code == 201
+
+    removed = client.delete(f"/api/doctors/{doctor_id}")
+    assert removed.status_code == 200, removed.get_json()
+    assert db.session.get(Doctor, doctor_id) is None
+    assert DoctorSchedule.query.filter_by(doctor_id=doctor_id).count() == 0
+
+
+def test_doctor_profile_delete_is_blocked_when_tokens_exist(client, clinic_admin):
+    from tests.conftest import create_patient
+
+    login(client, "admin@clinic.test")
+    created = client.post(
+        "/api/doctors",
+        json={"full_name": "Dr Has History", "specialization": "General Medicine"},
+    )
+    assert created.status_code == 201, created.get_json()
+    doctor_id = created.get_json()["data"]["doctor"]["id"]
+    patient = create_patient(clinic_admin.clinic, clinic_admin, first_name="History", phone="+919000000095")
+    token = client.post("/api/tokens", json={"patient_id": patient.id, "doctor_id": doctor_id})
+    assert token.status_code == 201, token.get_json()
+
+    removed = client.delete(f"/api/doctors/{doctor_id}")
+    assert removed.status_code == 409
+    assert "linked clinical records" in removed.get_json()["error"]["message"]

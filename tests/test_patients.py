@@ -133,3 +133,39 @@ def test_patient_search_finds_patient_by_exact_patient_code(client, clinic, clin
     assert len(matches) == 1
     assert matches[0]["id"] == patient.id
     assert matches[0]["patient_code"] == patient.patient_code
+
+def test_patient_profile_returns_full_authorized_contact_and_extended_details(client, clinic_admin):
+    login(client, "admin@clinic.test")
+    created = client.post(
+        "/api/patients",
+        json={
+            "first_name": "Full",
+            "last_name": "Details",
+            "gender": "female",
+            "date_of_birth": "1991-02-03",
+            "phone": "+919876543210",
+            "email": "full.details@example.test",
+            "blood_group": "o+",
+            "address_line1": "12 Clinic Road",
+            "city": "Chennai",
+            "state": "Tamil Nadu",
+            "postal_code": "600001",
+            "allergies": "Penicillin",
+            "medical_history": "Asthma history",
+            "notes": "Patient requested morning appointments",
+        },
+    )
+    assert created.status_code == 201, created.get_json()
+    patient_id = created.get_json()["data"]["patient"]["id"]
+
+    response = client.get(f"/api/patients/{patient_id}")
+    assert response.status_code == 200, response.get_json()
+    patient = response.get_json()["data"]["patient"]
+    assert patient["phone"] == "+919876543210"
+    assert patient["email"] == "full.details@example.test"
+    assert patient["blood_group"] == "o+"
+    assert patient["address_line1"] == "12 Clinic Road"
+    assert patient["allergies"] == "Penicillin"
+    assert patient["medical_history"] == "Asthma history"
+    assert patient["notes"] == "Patient requested morning appointments"
+    assert "appointments" in patient and "consultations" in patient and "followups" in patient
