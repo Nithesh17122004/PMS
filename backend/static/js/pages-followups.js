@@ -190,21 +190,25 @@ window.ClinicFlow.registerRoute("followup", {
       }, "btn-primary");
     }
     if (mayManage && !["completed", "cancelled"].includes(f.status)) {
-      addAction("Reschedule", async () => {
-        const proposed = prompt("Enter new follow-up date (YYYY-MM-DD):", f.due_date || "");
-        if (!proposed) return;
-        const reason = prompt("Reason for rescheduling (optional):", "") || "";
-        await window.ClinicFlow.apiPost("/api/followups/" + id + "/reschedule", { due_date: proposed, reason });
-        window.ClinicFlow.toast("Follow-up rescheduled.", "ok");
-        await refreshDetail();
-      });
-      addAction("Cancel follow-up", async () => {
-        const reason = prompt("Why is this follow-up being cancelled?");
-        if (!reason || reason.trim().length < 3) return;
-        await window.ClinicFlow.apiPost("/api/followups/" + id + "/cancel", { reason });
-        window.ClinicFlow.toast("Follow-up cancelled.", "ok");
-        await refreshDetail();
-      }, "btn-danger");
+      if (f.status !== "arrived" && !f.appointment_id) {
+        addAction("Reschedule", async () => {
+          const proposed = prompt("Enter new follow-up date (YYYY-MM-DD):", f.due_date || "");
+          if (!proposed) return;
+          const reason = prompt("Reason for rescheduling (optional):", "") || "";
+          await window.ClinicFlow.apiPost("/api/followups/" + id + "/reschedule", { due_date: proposed, reason });
+          window.ClinicFlow.toast("Follow-up rescheduled.", "ok");
+          await refreshDetail();
+        });
+      }
+      if (f.status !== "arrived") {
+        addAction("Cancel follow-up", async () => {
+          const reason = prompt("Why is this follow-up being cancelled?");
+          if (!reason || reason.trim().length < 3) return;
+          await window.ClinicFlow.apiPost("/api/followups/" + id + "/cancel", { reason });
+          window.ClinicFlow.toast("Follow-up cancelled.", "ok");
+          await refreshDetail();
+        }, "btn-danger");
+      }
       addAction("Send reminder", async () => {
         const channel = prompt("Reminder channel: email, sms or whatsapp", "sms");
         if (!channel) return;
