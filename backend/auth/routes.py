@@ -185,6 +185,16 @@ def api_forgot_password():
 
 @auth_bp.post("/api/setup")
 def api_setup():
+    from ..utils.db_status import database_schema_ready
+
+    if not database_schema_ready():
+        from ..utils.responses import fail
+
+        return fail(
+            "database_not_initialized",
+            "Database schema is missing. Run 'flask --app wsgi init-db' against the production database.",
+            503,
+        )
     from ..services.setup_service import perform_setup
 
     payload = request.get_json(silent=True) or request.form

@@ -14,6 +14,10 @@ pages_bp = Blueprint("pages", __name__)
 
 @pages_bp.get("/")
 def index():
+    from ..utils.db_status import database_schema_ready
+
+    if not database_schema_ready():
+        return _database_not_initialized_response(), 503
     if g.get("user"):
         return redirect(url_for("pages.app_home"))
     from ..models import User
@@ -25,11 +29,31 @@ def index():
 
 @pages_bp.get("/setup")
 def setup_page():
+    from ..utils.db_status import database_schema_ready
+
+    if not database_schema_ready():
+        return _database_not_initialized_response(), 503
     from ..models import User
 
     if User.query.count() > 0:
         return redirect(url_for("auth.login_page"))
     return render_template("auth/setup.html", page_title="First-time setup")
+
+
+def _database_not_initialized_response():
+    from flask import current_app
+
+    return (
+        "<!doctype html><html><head><title>Database not initialized</title></head>"
+        "<body style=\"font-family:system-ui;padding:48px;max-width:720px;margin:0 auto\">"
+        "<h1>Database not initialized</h1>"
+        "<p>ClinicFlow cannot start because the database schema is missing.</p>"
+        "<p>An administrator must run the following command against the production database:</p>"
+        "<pre style=\"background:#f1f5f9;padding:12px;border-radius:8px\">flask --app wsgi init-db</pre>"
+        "<p>On Render, open the service Shell and run the command above, or add it as a one-time release command. "
+        "See docs/DEPLOYMENT.md for details. Do not run destructive commands.</p>"
+        "</body></html>"
+    )
 
 
 @pages_bp.get("/app")
@@ -43,6 +67,10 @@ def app_home():
 
 @pages_bp.get("/display/<display_key>")
 def public_display(display_key):
+    from ..utils.db_status import database_schema_ready
+
+    if not database_schema_ready():
+        return _database_not_initialized_response(), 503
     clinic = Clinic.query.filter_by(display_key=display_key, is_active=True).first()
     if clinic is None or not clinic.settings or not clinic.settings.public_display_enabled:
         abort(404)
