@@ -34,7 +34,9 @@ window.ClinicFlow.registerRoute("consultations", {
     if ($("#consult-new")) {
       $("#consult-new").addEventListener("click", async () => {
         const doctorsRes = await window.ClinicFlow.apiGet("/api/doctors").catch(() => []);
-        const doctors = Array.isArray(doctorsRes) ? doctorsRes : (doctorsRes.doctors || []);
+        let doctors = Array.isArray(doctorsRes) ? doctorsRes : (doctorsRes.doctors || []);
+        const actorDoctorId = window.ClinicFlow.state.user.doctor_id;
+        if (actorDoctorId) doctors = doctors.filter((doctor) => doctor.id === actorDoctorId);
         const modal = window.ClinicFlow.openModal({ title: "New consultation", wide: true });
         const body = document.createElement("div");
         body.innerHTML = `
