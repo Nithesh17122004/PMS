@@ -538,7 +538,7 @@ window.ClinicFlow.App = {
       { label: "Operations", items: [["doctors", "Doctors", "doctors", "doctors.view"], ["notifications", "Notifications", "notifications", "notifications.view"], ["settings", "Settings", "settings", "settings.view"]] },
     ];
     candidates.forEach((group) => {
-      const items = group.items.filter((item) => can(item[3]) || (item[0] === "settings" && any("staff.view", "staff.manage", "audit.view", "settings.manage")));
+      const items = group.items.filter((item) => can(item[3]) || (item[0] === "settings" && any("staff.view", "staff.manage", "audit.view", "settings.manage", "settings.view")));
       if (items.length) groups.push({ label: group.label, items });
     });
     return groups;
