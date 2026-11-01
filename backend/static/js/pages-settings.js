@@ -119,7 +119,7 @@ window.ClinicFlow.registerRoute("settings", {
         target.textContent = message;
         target.hidden = !message;
       };
-      confirm.addEventListener("click", async () => {
+      window.ClinicFlow.bindModalAction(confirm, async () => {
         if (creating) return;
         const payload = {
           full_name: modal.querySelector("#st-name").value.trim(),
@@ -186,7 +186,7 @@ window.ClinicFlow.registerRoute("settings", {
         errorBox.setAttribute("role", "alert");
         errorBox.style.cssText = "color:#b91c1c;margin-top:12px";
         modal.querySelector(".modal-body").appendChild(errorBox);
-        confirm.addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(confirm, async () => {
           if (saving) return;
           const fullName = modal.querySelector("#ed-name").value.trim();
           if (!fullName) {
@@ -260,7 +260,7 @@ window.ClinicFlow.registerRoute("settings", {
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Save permissions</button>';
       modal.querySelector(".modal-footer").appendChild(footer);
-      modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+      window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
         const codes = Array.from(body.querySelectorAll("[data-perm]"))
           .filter((cb) => cb.checked)
           .map((cb) => cb.getAttribute("data-perm"));
