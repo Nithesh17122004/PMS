@@ -164,7 +164,11 @@ window.ClinicFlow.App = {
         await action(event);
       } catch (error) {
         if (typeof onError === "function") {
-          onError(error);
+          try {
+            onError(error);
+          } catch (handlerError) {
+            toast(handlerError && handlerError.message ? handlerError.message : "The error could not be displayed.", "error");
+          }
         } else {
           toast(error && error.message ? error.message : "The action could not be completed. Please try again.", "error");
         }
