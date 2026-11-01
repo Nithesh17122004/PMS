@@ -411,7 +411,7 @@ def followup_dict(plan):
         return None
     tokens = sorted(
         plan.tokens,
-        key=lambda item: (item.created_at or item.token_date, item.token_number),
+        key=lambda item: (item.created_at.isoformat() if item.created_at else (item.token_date.isoformat() if item.token_date else ""), item.token_number),
         reverse=True,
     )
     token = next(
