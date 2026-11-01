@@ -68,6 +68,8 @@ window.ClinicFlow.registerRoute("consultation", {
     const id = params.id;
     const data = await window.ClinicFlow.apiGet("/api/consultations/" + id);
     const c = data.consultation || {};
+    const currentUser = window.ClinicFlow.state.user || {};
+    const canEdit = c.status === "draft" && !!currentUser.doctor_id && c.doctor && currentUser.doctor_id === c.doctor.id;
     host.innerHTML = `
       <div class="page-head">
         <div><div class="page-title">Consultation ${window.ClinicFlow.escapeHtml(c.consultation_code || "")}</div><div class="page-sub">${window.ClinicFlow.escapeHtml(c.patient ? c.patient.full_name : "")} · ${window.ClinicFlow.statusBadge(c.status)}</div></div>
@@ -90,11 +92,20 @@ window.ClinicFlow.registerRoute("consultation", {
         <label class="field"><span>Follow-up priority</span><select class="select" id="cf-followup-priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
         <label class="field full"><span>Diagnoses (ICD codes)</span><textarea class="input" id="cf-icd" placeholder='[{"icd_code":"J06.9","description":"Acute URI","diagnosis_type":"primary"}]'>${window.ClinicFlow.escapeHtml(JSON.stringify(c.diagnoses || [], null, 2))}</textarea></label>
       </div>
-      <div class="row mt16">
-        <button class="btn" id="consult-save">Save draft</button>
-        <button class="btn btn-primary" id="consult-complete-btn">Complete</button>
-      </div>
+      ${canEdit ? '<div class="row mt16"><button class="btn" id="consult-save">Save draft</button><button class="btn btn-primary" id="consult-complete-btn">Complete</button></div>' : '<div class="muted small mt16">This consultation is read-only because it is completed or belongs to another doctor.</div>'}
     `;
+    if (!canEdit) form.querySelectorAll("textarea, input, select").forEach((field) => { field.disabled = true; });
+    const previousConsultations = (data.consultation.previous_consultations || []);
+    if (previousConsultations.length) {
+      const previousPanel = document.createElement("div");
+      previousPanel.className = "card mt16";
+      previousPanel.innerHTML = '<div class="card-header"><div class="card-title">Previous consultations</div></div><div class="card-body">' +
+        previousConsultations.map((item) => '<div class="row between mb8"><div><b>' + window.ClinicFlow.escapeHtml(item.consultation_code) +
+        '</b><div class="muted small">' + window.ClinicFlow.fmtDateTime(item.completed_at) + ' · ' +
+        window.ClinicFlow.escapeHtml(item.diagnosis_summary || "No diagnosis recorded") + '</div></div>' +
+        window.ClinicFlow.statusBadge(item.status) + '</div>').join("") + '</div>';
+      host.appendChild(previousPanel);
+    }
     const collectPayload = () => {
       let diagnoses;
       let vitals;
@@ -128,8 +139,8 @@ window.ClinicFlow.registerRoute("consultation", {
         window.ClinicFlow.toast(error.message || "Draft could not be saved.", "error");
       }
     };
-    if (host.querySelector("#consult-save")) host.querySelector("#consult-save").addEventListener("click", save);
-    if (host.querySelector("#consult-complete-btn")) host.querySelector("#consult-complete-btn").addEventListener("click", async () => {
+    if (canEdit && host.querySelector("#consult-save")) host.querySelector("#consult-save").addEventListener("click", save);
+    if (canEdit && host.querySelector("#consult-complete-btn")) host.querySelector("#consult-complete-btn").addEventListener("click", async () => {
       const button = host.querySelector("#consult-complete-btn");
       button.disabled = true;
       try {
