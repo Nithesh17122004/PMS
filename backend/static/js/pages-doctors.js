@@ -64,7 +64,7 @@ window.ClinicFlow.registerRoute("doctors", {
           target.textContent = message;
           target.hidden = !message;
         };
-        confirm2.addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(confirm2, async () => {
           if (saving) return;
           const startDate = $("#dl-start").value;
           const endDate = $("#dl-end").value;
@@ -104,7 +104,7 @@ window.ClinicFlow.registerRoute("doctors", {
           target.textContent = message;
           target.hidden = !message;
         };
-        confirm2.addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(confirm2, async () => {
           if (saving) return;
           const weekday = Number($("#ds-weekday").value);
           const startTime = $("#ds-start").value;
@@ -148,7 +148,7 @@ window.ClinicFlow.registerRoute("doctors", {
         modal.querySelector(".modal-footer").appendChild(footer);
         const confirm = modal.querySelector("[data-modal-confirm]");
         let saving = false;
-        confirm.addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(confirm, async () => {
           if (saving) return;
           const fullName = $("#doc-name").value.trim();
           const specialization = $("#doc-spec").value.trim();
@@ -157,6 +157,16 @@ window.ClinicFlow.registerRoute("doctors", {
           const errorBox = modal.querySelector("[data-form-error]");
           if (!fullName || !specialization) {
             errorBox.textContent = "Doctor name and specialization are required.";
+            errorBox.hidden = false;
+            return;
+          }
+          if (password && !email) {
+            errorBox.textContent = "A login email is required when setting a password.";
+            errorBox.hidden = false;
+            return;
+          }
+          if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+            errorBox.textContent = "Enter a valid doctor login email address.";
             errorBox.hidden = false;
             return;
           }

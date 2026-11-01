@@ -86,14 +86,19 @@ window.ClinicFlow.App = {
     host.className = "modal-backdrop";
     const modal = document.createElement("div");
     modal.className = "modal";
-    modal.innerHTML = '<div class="modal-header"><h3></h3><button class="icon-btn" data-modal-close>&times;</button></div><div class="modal-body"><p class="muted"></p></div><div class="modal-footer"><button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-danger" data-modal-confirm></button></div>';
+    modal.innerHTML = '<div class="modal-header"><h3></h3><button class="icon-btn" data-modal-close>&times;</button></div><div class="modal-body"><p class="muted"></p><div data-confirm-error role="alert" aria-live="polite" hidden style="color:#b91c1c;margin-top:12px"></div></div><div class="modal-footer"><button class="btn" type="button" data-modal-cancel>Cancel</button><button class="btn btn-danger" type="button" data-modal-confirm></button></div>';
     modal.querySelector("h3").textContent = message || "";
     modal.querySelector(".modal-body p").textContent = message || "";
     modal.querySelector("[data-modal-confirm]").textContent = confirmText || "Confirm";
     host.appendChild(modal);
     document.body.appendChild(host);
 
+    const confirmButton = modal.querySelector("[data-modal-confirm]");
+    const dismissButtons = Array.from(modal.querySelectorAll("[data-modal-close], [data-modal-cancel]"));
+    const errorBox = modal.querySelector("[data-confirm-error]");
     let settled = false;
+    let running = false;
+
     const finish = (callback) => {
       if (settled) return;
       settled = true;
@@ -109,8 +114,31 @@ window.ClinicFlow.App = {
         }
       }
     };
-    modal.querySelector("[data-modal-confirm]").addEventListener("click", () => finish(onConfirm));
+
+    confirmButton.addEventListener("click", async () => {
+      if (settled || running) return;
+      running = true;
+      confirmButton.disabled = true;
+      dismissButtons.forEach((button) => { button.disabled = true; });
+      errorBox.hidden = true;
+      errorBox.textContent = "";
+      try {
+        if (typeof onConfirm === "function") await onConfirm();
+        finish();
+      } catch (error) {
+        errorBox.textContent = error && error.message ? error.message : "The action could not be completed. Please try again.";
+        errorBox.hidden = false;
+      } finally {
+        running = false;
+        if (!settled && confirmButton.isConnected) {
+          confirmButton.disabled = false;
+          dismissButtons.forEach((button) => { button.disabled = false; });
+        }
+      }
+    });
+
     host.addEventListener("click", (event) => {
+      if (running || settled) return;
       if (event.target === host) {
         finish(onCancel);
         return;
@@ -119,6 +147,35 @@ window.ClinicFlow.App = {
         ? event.target.closest("[data-modal-close], [data-modal-cancel]")
         : null;
       if (dismiss && host.contains(dismiss)) finish(onCancel);
+    });
+  }
+
+  function bindModalAction(button, action, onError) {
+    if (!button || typeof action !== "function") return;
+    let busy = false;
+    button.addEventListener("click", async (event) => {
+      if (busy) {
+        event.preventDefault();
+        return;
+      }
+      busy = true;
+      button.disabled = true;
+      try {
+        await action(event);
+      } catch (error) {
+        if (typeof onError === "function") {
+          try {
+            onError(error);
+          } catch (handlerError) {
+            toast(handlerError && handlerError.message ? handlerError.message : "The error could not be displayed.", "error");
+          }
+        } else {
+          toast(error && error.message ? error.message : "The action could not be completed. Please try again.", "error");
+        }
+      } finally {
+        busy = false;
+        if (button.isConnected) button.disabled = false;
+      }
     });
   }
 
@@ -596,6 +653,7 @@ window.ClinicFlow.App = {
   window.ClinicFlow.closeModal = closeModal;
   window.ClinicFlow.openModal = openModal;
   window.ClinicFlow.confirmDialog = confirmDialog;
+  window.ClinicFlow.bindModalAction = bindModalAction;
   window.ClinicFlow.showLoading = showLoading;
   window.ClinicFlow.hideLoading = hideLoading;
   window.ClinicFlow.emptyState = emptyState;

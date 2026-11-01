@@ -78,17 +78,18 @@ window.ClinicFlow.registerRoute("patients", {
           '<label class="field"><span>First name</span><input class="input" id="pf-first"/></label>' +
           '<label class="field"><span>Last name</span><input class="input" id="pf-last"/></label>' +
           '<label class="field"><span>Gender</span><select class="select" id="pf-gender"><option value="female">Female</option><option value="male">Male</option><option value="other">Other</option><option value="prefer_not_to_say">Prefer not to say</option></select></label>' +
-          '<label class="field"><span>Date of birth</span><input class="class=\"input\" type="date" id="pf-dob"/></label>' +
+          '<label class="field"><span>Date of birth</span><input class="input" type="date" id="pf-dob"/></label>' +
           '<label class="field"><span>Age (optional)</span><input class="input" type="number" id="pf-age"/></label>' +
           '<label class="field"><span>Phone</span><input class="input" id="pf-phone"/></label>' +
           '<label class="field"><span>Email</span><input class="input" id="pf-email"/></label>' +
           '<label class="field"><span>Blood group</span><input class="input" id="pf-blood"/></label>' +
           '</div>';
+        modal.querySelector(".modal-body").appendChild(body);
         const footer = document.createElement("div");
         footer.className = "row";
         footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Save patient</button>';
         modal.querySelector(".modal-footer").appendChild(footer);
-        modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
           const payload = {
             first_name: $("#pf-first").value.trim(), last_name: $("#pf-last").value.trim(),
             gender: $("#pf-gender").value, date_of_birth: $("#pf-dob").value || null,
@@ -170,18 +171,26 @@ window.ClinicFlow.registerRoute("patient", {
     if (editBtn) editBtn.addEventListener("click", async () => {
       const modal = window.ClinicFlow.openModal({ title: "Edit patient", wide: true });
       const body = document.createElement("div");
-      body.innerHTML = '<div class="form-grid">' +
-        '<label class="field"><span>First name</span><input class="input" id="pe-first" value="${window.ClinicFlow.escapeHtml(p.first_name || "")}"/></label>' +
-        '<label class="field"><span>Last name</span><input class="input" id="pe-last" value="${window.ClinicFlow.escapeHtml(p.last_name || "")}"/></label>' +
-        '<label class="field"><span>Gender</span><select class="select" id="pe-gender"><option value="female">Female</option><option value="male">Male</option><option value="other">Other</option><option value="prefer_not_to_say">Prefer not to say</option></select></label>' +
-        '<label class="field"><span>Date of birth</span><input class="input" type="date" id="pe-dob" value="${p.date_of_birth || ""}"/></label>' +
-        '<label class="field"><span>Phone</span><input class="input" id="pe-phone" value="${window.ClinicFlow.escapeHtml(p.phone || "")}"/></label>' +
-        '<label class="field"><span>Email</span><input class="input" id="pe-email" value="${window.ClinicFlow.escapeHtml(p.email || "")}"/></label>' +
-        '</div>';
+      body.innerHTML = `
+        <div class="form-grid">
+          <label class="field"><span>First name</span><input class="input" id="pe-first" value="${window.ClinicFlow.escapeHtml(p.first_name || "")}" required/></label>
+          <label class="field"><span>Last name</span><input class="input" id="pe-last" value="${window.ClinicFlow.escapeHtml(p.last_name || "")}" required/></label>
+          <label class="field"><span>Gender</span><select class="select" id="pe-gender">
+            <option value="female" ${p.gender === "female" ? "selected" : ""}>Female</option>
+            <option value="male" ${p.gender === "male" ? "selected" : ""}>Male</option>
+            <option value="other" ${p.gender === "other" ? "selected" : ""}>Other</option>
+            <option value="prefer_not_to_say" ${p.gender === "prefer_not_to_say" ? "selected" : ""}>Prefer not to say</option>
+          </select></label>
+          <label class="field"><span>Date of birth</span><input class="input" type="date" id="pe-dob" value="${p.date_of_birth || ""}"/></label>
+          <label class="field"><span>Phone</span><input class="input" id="pe-phone" value="${window.ClinicFlow.escapeHtml(p.phone || "")}"/></label>
+          <label class="field"><span>Email</span><input class="input" id="pe-email" value="${window.ClinicFlow.escapeHtml(p.email || "")}"/></label>
+        </div>
+        <div data-form-error role="alert" aria-live="polite" hidden style="color:#b91c1c;margin-top:12px"></div>`;
+      modal.querySelector(".modal-body").appendChild(body);
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Save changes</button>';
       modal.querySelector(".modal-footer").appendChild(footer);
-      modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+      window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
         const payload = {
           first_name: $("#pe-first").value.trim(), last_name: $("#pe-last").value.trim(),
           gender: $("#pe-gender").value, date_of_birth: $("#pe-dob").value || null,
@@ -200,7 +209,6 @@ window.ClinicFlow.registerRoute("patient", {
       const body = document.createElement("div");
       const items = (events || []).slice(0, 30);
       body.innerHTML = items.length ? items.map((e) => `<div class="row mb8"><span class="badge info">${window.ClinicFlow.escapeHtml(e.type)}</span><div class="grow"><b>${window.ClinicFlow.escapeHtml(e.title)}</b><div class="muted small">${window.ClinicFlow.escapeHtml(e.detail || "")}</div></div><span class="muted small">${window.ClinicFlow.fmtDateTime(e.at)}</span></div>`).join("") : '<div class="empty-state"><div class="empty-title">No timeline events yet</div></div>';
-      window.ClinicFlow.closeModal;
       modal.querySelector(".modal-body").appendChild(body);
     });
   },

@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  },
+  "scripts": {
+    "test:frontend": "node --test tests/frontend/*.test.cjs"
+  }
+}

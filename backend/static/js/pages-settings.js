@@ -119,7 +119,7 @@ window.ClinicFlow.registerRoute("settings", {
         target.textContent = message;
         target.hidden = !message;
       };
-      confirm.addEventListener("click", async () => {
+      window.ClinicFlow.bindModalAction(confirm, async () => {
         if (creating) return;
         const payload = {
           full_name: modal.querySelector("#st-name").value.trim(),
@@ -130,7 +130,7 @@ window.ClinicFlow.registerRoute("settings", {
           password: modal.querySelector("#st-password").value || null,
         };
         if (!payload.full_name) return showError("Full name is required.");
-        if (!payload.email || !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(payload.email)) return showError("Enter a valid email address.");
+        if (!payload.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(payload.email)) return showError("Enter a valid email address.");
         if (!payload.role_id) return showError("Choose a staff role.");
         if (payload.password && (payload.password.length < 10 || payload.password.length > 72 || !/[A-Z]/.test(payload.password) || !/[a-z]/.test(payload.password) || !/[0-9]/.test(payload.password) || !/[^A-Za-z0-9]/.test(payload.password))) {
           return showError("Password must be 10–72 characters and include uppercase, lowercase, a number, and a symbol.");
@@ -186,7 +186,7 @@ window.ClinicFlow.registerRoute("settings", {
         errorBox.setAttribute("role", "alert");
         errorBox.style.cssText = "color:#b91c1c;margin-top:12px";
         modal.querySelector(".modal-body").appendChild(errorBox);
-        confirm.addEventListener("click", async () => {
+        window.ClinicFlow.bindModalAction(confirm, async () => {
           if (saving) return;
           const fullName = modal.querySelector("#ed-name").value.trim();
           if (!fullName) {
@@ -260,7 +260,7 @@ window.ClinicFlow.registerRoute("settings", {
       const footer = document.createElement("div");
       footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Save permissions</button>';
       modal.querySelector(".modal-footer").appendChild(footer);
-      modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+      window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
         const codes = Array.from(body.querySelectorAll("[data-perm]"))
           .filter((cb) => cb.checked)
           .map((cb) => cb.getAttribute("data-perm"));
