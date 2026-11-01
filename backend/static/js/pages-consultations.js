@@ -73,7 +73,7 @@ window.ClinicFlow.registerRoute("consultation", {
     host.innerHTML = `
       <div class="page-head">
         <div><div class="page-title">Consultation ${window.ClinicFlow.escapeHtml(c.consultation_code || "")}</div><div class="page-sub">${window.ClinicFlow.escapeHtml(c.patient ? c.patient.full_name : "")} · ${window.ClinicFlow.statusBadge(c.status)}</div></div>
-        <div class="row"><button class="btn" data-back>Back</button><button class="btn" id="consult-invoice">Invoice</button></div>
+        <div class="row"><button class="btn" data-back>Back</button>${(window.ClinicFlow.state.user.permissions || []).includes("billing.create") ? '<button class="btn" id="consult-invoice">Invoice</button>' : ""}</div>
       </div>
       <div class="card"><div class="card-body"><div id="consult-form"></div></div></div>
     `;
