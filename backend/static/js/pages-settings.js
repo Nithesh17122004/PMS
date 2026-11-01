@@ -130,7 +130,7 @@ window.ClinicFlow.registerRoute("settings", {
           password: modal.querySelector("#st-password").value || null,
         };
         if (!payload.full_name) return showError("Full name is required.");
-        if (!payload.email || !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(payload.email)) return showError("Enter a valid email address.");
+        if (!payload.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(payload.email)) return showError("Enter a valid email address.");
         if (!payload.role_id) return showError("Choose a staff role.");
         if (payload.password && (payload.password.length < 10 || payload.password.length > 72 || !/[A-Z]/.test(payload.password) || !/[a-z]/.test(payload.password) || !/[0-9]/.test(payload.password) || !/[^A-Za-z0-9]/.test(payload.password))) {
           return showError("Password must be 10–72 characters and include uppercase, lowercase, a number, and a symbol.");
