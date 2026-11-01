@@ -92,18 +92,20 @@ window.ClinicFlow.registerRoute("queue", {
       const currentActions = card.querySelector("[data-current-actions]");
       const nextActions = card.querySelector("[data-next-actions]");
       const list = card.querySelector("[data-waiting-list]");
-      if (current) {
-        if (can("tokens.recall")) currentActions.appendChild(actionButton("Recall", "/api/tokens/" + current.id + "/recall"));
-        if (can("tokens.skip")) currentActions.appendChild(actionButton("Skip", "/api/tokens/" + current.id + "/skip"));
-        if (can("tokens.skip")) currentActions.appendChild(actionButton("No-show", "/api/tokens/" + current.id + "/no-show"));
-        if (current.status !== "in_consultation" && can("consultations.create")) {
-          currentActions.appendChild(actionButton("Start consultation", "/api/tokens/" + current.id + "/start", "btn-primary"));
+      if (current && dateInput.value === localToday) {
+        if (current.status !== "in_consultation") {
+          if (can("tokens.recall")) currentActions.appendChild(actionButton("Recall", "/api/tokens/" + current.id + "/recall"));
+          if (can("tokens.skip")) currentActions.appendChild(actionButton("Skip", "/api/tokens/" + current.id + "/skip"));
+          if (can("tokens.skip")) currentActions.appendChild(actionButton("No-show", "/api/tokens/" + current.id + "/no-show"));
+          if ((current.status === "called" || current.status === "recalled") && can("consultations.create")) {
+            currentActions.appendChild(actionButton("Start consultation", "/api/tokens/" + current.id + "/start", "btn-primary"));
+          }
         }
         if (current.status === "in_consultation" && can("consultations.complete")) {
           currentActions.appendChild(actionButton("Close token", "/api/tokens/" + current.id + "/complete"));
         }
       }
-      if (next && !current && can("tokens.call")) {
+      if (next && !current && dateInput.value === localToday && can("tokens.call")) {
         nextActions.appendChild(actionButton("Call next", "/api/tokens/" + next.id + "/call", "btn-primary"));
       } else if (next && current) {
         nextActions.innerHTML = '<span class="muted small">Finish or skip the current patient before calling the next.</span>';
