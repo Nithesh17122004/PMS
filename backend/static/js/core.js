@@ -50,25 +50,79 @@ window.ClinicFlow.App = {
       (sub ? '<div class="empty-sub">' + escapeHtml(sub) + '</div>' : '');
     return wrap.outerHTML;
   }
-  function confirmDialog(message, onConfirm, onCancel, confirmText) {
-    closeModal();
-    const host = document.querySelector(".modal-backdrop") || document.body.appendChild((() => { const d = document.createElement("div"); d.className = "modal-backdrop"; document.body.appendChild(d); return d; })());
-    host.className = "modal-backdrop";
-    host.innerHTML = '<div class="modal"><div class="modal-header"><h3>' + escapeHtml(message) + '</h3><button class="icon-btn" data-modal-close>&times;</button></div><div class="modal-body"><p class="muted">' + escapeHtml(message) + '</p></div><div class="modal-footer"><button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-danger" data-modal-confirm>' + escapeHtml(confirmText || "Confirm") + '</button></div></div>';
-    const btn = host.querySelector("[data-modal-confirm]"); const cancel = host.querySelector("[data-modal-cancel]");
-    const done = (fn) => { host.remove(); if (fn) fn(); };
-    btn.addEventListener("click", () => done(onConfirm));
-    cancel.addEventListener("click", () => done(onCancel));
-    host.querySelector("[data-modal-close]").addEventListener("click", () => done(onCancel));
-    host.addEventListener("click", (e) => { if (e.target === host) done(onCancel); });
+  function closeModal(modalOrHost) {
+    let host = null;
+    if (modalOrHost && typeof modalOrHost.closest === "function") {
+      host = modalOrHost.matches && modalOrHost.matches(".modal-backdrop")
+        ? modalOrHost
+        : modalOrHost.closest(".modal-backdrop");
+    }
+    if (!host) {
+      const stack = document.querySelectorAll(".modal-backdrop");
+      host = stack.length ? stack[stack.length - 1] : null;
+    }
+    if (host) host.remove();
+    return Boolean(host);
   }
 
-  function closeModal() {
-    const host = document.querySelector(".modal-backdrop");
-    if (host) host.remove();
+  function bindModalDismissal(host) {
+    host.addEventListener("click", function (event) {
+      if (event.target === host) {
+        closeModal(host);
+        return;
+      }
+      const dismiss = event.target.closest
+        ? event.target.closest("[data-modal-close], [data-modal-cancel]")
+        : null;
+      if (dismiss && host.contains(dismiss)) {
+        event.preventDefault();
+        closeModal(host);
+      }
+    });
   }
+
+  function confirmDialog(message, onConfirm, onCancel, confirmText) {
+    const host = document.createElement("div");
+    host.className = "modal-backdrop";
+    const modal = document.createElement("div");
+    modal.className = "modal";
+    modal.innerHTML = '<div class="modal-header"><h3></h3><button class="icon-btn" data-modal-close>&times;</button></div><div class="modal-body"><p class="muted"></p></div><div class="modal-footer"><button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-danger" data-modal-confirm></button></div>';
+    modal.querySelector("h3").textContent = message || "";
+    modal.querySelector(".modal-body p").textContent = message || "";
+    modal.querySelector("[data-modal-confirm]").textContent = confirmText || "Confirm";
+    host.appendChild(modal);
+    document.body.appendChild(host);
+
+    let settled = false;
+    const finish = (callback) => {
+      if (settled) return;
+      settled = true;
+      host.remove();
+      if (typeof callback === "function") {
+        try {
+          const result = callback();
+          if (result && typeof result.catch === "function") {
+            result.catch((error) => toast(error && error.message ? error.message : "The action could not be completed.", "error"));
+          }
+        } catch (error) {
+          toast(error && error.message ? error.message : "The action could not be completed.", "error");
+        }
+      }
+    };
+    modal.querySelector("[data-modal-confirm]").addEventListener("click", () => finish(onConfirm));
+    host.addEventListener("click", (event) => {
+      if (event.target === host) {
+        finish(onCancel);
+        return;
+      }
+      const dismiss = event.target.closest
+        ? event.target.closest("[data-modal-close], [data-modal-cancel]")
+        : null;
+      if (dismiss && host.contains(dismiss)) finish(onCancel);
+    });
+  }
+
   function openModal({ title, body, footer, wide } = {}) {
-    closeModal();
     const host = document.createElement("div");
     host.className = "modal-backdrop";
     const modal = document.createElement("div");
@@ -79,11 +133,7 @@ window.ClinicFlow.App = {
     modal.querySelector(".modal-footer").appendChild(footer || document.createElement("div"));
     host.appendChild(modal);
     document.body.appendChild(host);
-    modal.querySelector("[data-modal-close]").addEventListener("click", closeModal);
-    const cancelBtn = modal.querySelector("[data-modal-cancel]");
-    const confirmBtn = modal.querySelector("[data-modal-confirm]");
-    if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
-    if (confirmBtn) confirmBtn.addEventListener("click", closeModal);
+    bindModalDismissal(host);
     return modal;
   }
 

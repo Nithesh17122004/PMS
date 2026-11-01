@@ -9,6 +9,7 @@ window.ClinicFlow.registerRoute("settings", {
     const perms = await window.ClinicFlow.apiGet("/api/clinic/permissions").catch(() => ({ groups: {}, permissions: [] }));
     const audit = await window.ClinicFlow.apiGet("/api/clinic/audit-logs").catch(() => []);
     const roleList = roles || [];
+    const staffRoles = roleList.filter((role) => role.slug !== "doctor");
     const permGroups = (perms && perms.groups) || {};
     const allPerms = (perms && perms.permissions) || [];
     host.innerHTML = `
@@ -31,7 +32,9 @@ window.ClinicFlow.registerRoute("settings", {
       <div class="card"><div class="card-header"><div class="card-title">Audit log</div></div><div class="table-wrap"><table class="table"><thead><tr><th>Actor</th><th>Action</th><th>Entity</th><th>When</th></tr></thead><tbody id="audit-tbody"></tbody></table></div></div>
     `;
 
+    let staffRows = staff || [];
     const renderStaff = (rows) => {
+      staffRows = rows || [];
       const tbody = document.querySelector("#staff-tbody");
       if (!rows || !rows.length) { tbody.innerHTML = `<tr><td colspan="5">${window.ClinicFlow.emptyState("No staff", "Invite staff members.")}</td></tr>`; return; }
       tbody.innerHTML = rows.map((u) => `
@@ -75,39 +78,67 @@ window.ClinicFlow.registerRoute("settings", {
     const reloadStaff = async () => {
       const q = document.querySelector("#staff-search").value.trim();
       const status = document.querySelector("#staff-status").value;
-      const data = await window.ClinicFlow.apiGet("/api/clinic/staff?status=" + encodeURIComponent(status) + (q ? "&q=" + encodeURIComponent(q) : ""));
-      renderStaff(data || []);
+      try {
+        const data = await window.ClinicFlow.apiGet("/api/clinic/staff?status=" + encodeURIComponent(status) + (q ? "&q=" + encodeURIComponent(q) : ""));
+        renderStaff(data || []);
+      } catch (error) {
+        window.ClinicFlow.toast(error && error.message ? error.message : "Could not refresh staff.", "error");
+      }
     };
     document.querySelector("#staff-search").addEventListener("input", () => { clearTimeout(window._st); window._st = setTimeout(reloadStaff, 250); });
     document.querySelector("#staff-status").addEventListener("change", reloadStaff);
 
-    // Create staff
+    // Create non-doctor staff accounts. Doctor logins and profiles are created together in Doctors.
     document.querySelector("#staff-new").addEventListener("click", () => {
       const modal = window.ClinicFlow.openModal({ title: "Add staff", wide: true });
       const body = document.createElement("div");
       body.innerHTML = `
         <div class="form-grid">
-          <label class="field"><span>Full name</span><input class="input" id="st-name"/></label>
-          <label class="field"><span>Email</span><input class="input" id="st-email" type="email"/></label>
-          <label class="field"><span>Role</span><select class="select" id="st-role">${roleList.map((r) => `<option value="${r.id}">${window.ClinicFlow.escapeHtml(r.name)}</option>`).join("")}</select></label>
+          <label class="field"><span>Full name</span><input class="input" id="st-name" required/></label>
+          <label class="field"><span>Email</span><input class="input" id="st-email" type="email" maxlength="190" required/></label>
+          <label class="field"><span>Role</span><select class="select" id="st-role" required><option value="">Choose a role</option>${staffRoles.map((r) => `<option value="${r.id}">${window.ClinicFlow.escapeHtml(r.name)}</option>`).join("")}</select></label>
           <label class="field"><span>Phone</span><input class="input" id="st-phone"/></label>
           <label class="field"><span>Designation</span><input class="input" id="st-designation"/></label>
-          <label class="field"><span>Password (leave blank for temp)</span><input class="input" id="st-password" type="password"/></label>
-        </div>`;
+          <label class="field"><span>Password (leave blank for temporary password)</span><input class="input" id="st-password" type="password" maxlength="72"/></label>
+        </div>
+        <p class="muted small">Doctor accounts must be created in the Doctors module so the login is linked to a clinical profile.</p>
+        <button class="btn btn-sm" type="button" data-open-doctors>Open Doctors</button>
+        <div data-form-error role="alert" aria-live="polite" hidden style="color:#b91c1c;margin-top:12px"></div>`;
       modal.querySelector(".modal-body").appendChild(body);
+      body.querySelector("[data-open-doctors]").addEventListener("click", async () => {
+        window.ClinicFlow.closeModal();
+        await window.ClinicFlow.navigate("#/doctors");
+      });
       const footer = document.createElement("div");
-      footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Create</button>';
+      footer.innerHTML = '<button class="btn" type="button" data-modal-cancel>Cancel</button><button class="btn btn-primary" type="button" data-modal-confirm>Create</button>';
       modal.querySelector(".modal-footer").appendChild(footer);
-      modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+      const confirm = modal.querySelector("[data-modal-confirm]");
+      let creating = false;
+      const showError = (message) => {
+        const target = modal.querySelector("[data-form-error]");
+        target.textContent = message;
+        target.hidden = !message;
+      };
+      confirm.addEventListener("click", async () => {
+        if (creating) return;
+        const payload = {
+          full_name: modal.querySelector("#st-name").value.trim(),
+          email: modal.querySelector("#st-email").value.trim(),
+          role_id: modal.querySelector("#st-role").value,
+          phone: modal.querySelector("#st-phone").value.trim() || null,
+          designation: modal.querySelector("#st-designation").value.trim() || null,
+          password: modal.querySelector("#st-password").value || null,
+        };
+        if (!payload.full_name) return showError("Full name is required.");
+        if (!payload.email || !/^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$/.test(payload.email)) return showError("Enter a valid email address.");
+        if (!payload.role_id) return showError("Choose a staff role.");
+        if (payload.password && (payload.password.length < 10 || payload.password.length > 72 || !/[A-Z]/.test(payload.password) || !/[a-z]/.test(payload.password) || !/[0-9]/.test(payload.password) || !/[^A-Za-z0-9]/.test(payload.password))) {
+          return showError("Password must be 10–72 characters and include uppercase, lowercase, a number, and a symbol.");
+        }
+        creating = true;
+        confirm.disabled = true;
+        showError("");
         try {
-          const payload = {
-            full_name: document.querySelector("#st-name").value.trim(),
-            email: document.querySelector("#st-email").value.trim(),
-            role_id: document.querySelector("#st-role").value,
-            phone: document.querySelector("#st-phone").value.trim() || null,
-            designation: document.querySelector("#st-designation").value.trim() || null,
-            password: document.querySelector("#st-password").value || null,
-          };
           const res = await window.ClinicFlow.apiPost("/api/clinic/staff", payload);
           if (res.staff && res.staff.temporary_password) {
             window.prompt("Temporary password (copy now):", res.staff.temporary_password);
@@ -115,7 +146,12 @@ window.ClinicFlow.registerRoute("settings", {
           window.ClinicFlow.toast("Staff created", "ok");
           window.ClinicFlow.closeModal();
           await reloadStaff();
-        } catch (e) { window.ClinicFlow.toast(e.message, "error"); }
+        } catch (error) {
+          showError(error && error.message ? error.message : "Could not create staff account. Please try again.");
+        } finally {
+          creating = false;
+          if (modal.isConnected) confirm.disabled = false;
+        }
       });
     });
 
@@ -126,35 +162,57 @@ window.ClinicFlow.registerRoute("settings", {
       const toggleBtn = e.target.closest("[data-toggle]");
       if (editBtn) {
         const id = editBtn.getAttribute("data-edit");
-        const u = (staff || []).find((x) => x.id === id);
+        const u = staffRows.find((x) => x.id === id);
         if (!u) return;
         const modal = window.ClinicFlow.openModal({ title: "Edit staff", wide: true });
+        const editableRoles = roleList.filter((r) => r.slug !== "doctor" || (u.role && u.role.slug === "doctor"));
         const body = document.createElement("div");
         body.innerHTML = `
           <div class="form-grid">
             <label class="field"><span>Full name</span><input class="input" id="ed-name" value="${window.ClinicFlow.escapeHtml(u.full_name)}"/></label>
             <label class="field"><span>Phone</span><input class="input" id="ed-phone" value="${window.ClinicFlow.escapeHtml(u.phone || "")}"/></label>
             <label class="field"><span>Designation</span><input class="input" id="ed-designation" value="${window.ClinicFlow.escapeHtml(u.designation || "")}"/></label>
-            <label class="field"><span>Role</span><select class="select" id="ed-role">${roleList.map((r) => `<option value="${r.id}" ${r.id === (u.role && u.role.id) ? "selected" : ""}>${window.ClinicFlow.escapeHtml(r.name)}</option>`).join("")}</select></label>
+            <label class="field"><span>Role</span><select class="select" id="ed-role">${editableRoles.map((r) => `<option value="${r.id}" ${r.id === (u.role && u.role.id) ? "selected" : ""}>${window.ClinicFlow.escapeHtml(r.name)}</option>`).join("")}</select></label>
             <label class="checkbox-row"><input type="checkbox" id="ed-active" ${u.is_active ? "checked" : ""}/> Active</label>
           </div>`;
         modal.querySelector(".modal-body").appendChild(body);
         const footer = document.createElement("div");
-        footer.innerHTML = '<button class="btn" data-modal-cancel>Cancel</button><button class="btn btn-primary" data-modal-confirm>Save</button>';
+        footer.innerHTML = '<button class="btn" type="button" data-modal-cancel>Cancel</button><button class="btn btn-primary" type="button" data-modal-confirm>Save</button>';
         modal.querySelector(".modal-footer").appendChild(footer);
-        modal.querySelector("[data-modal-confirm]").addEventListener("click", async () => {
+        const confirm = modal.querySelector("[data-modal-confirm]");
+        let saving = false;
+        const errorBox = document.createElement("div");
+        errorBox.setAttribute("data-form-error", "");
+        errorBox.setAttribute("role", "alert");
+        errorBox.style.cssText = "color:#b91c1c;margin-top:12px";
+        modal.querySelector(".modal-body").appendChild(errorBox);
+        confirm.addEventListener("click", async () => {
+          if (saving) return;
+          const fullName = modal.querySelector("#ed-name").value.trim();
+          if (!fullName) {
+            errorBox.textContent = "Full name is required.";
+            return;
+          }
+          saving = true;
+          confirm.disabled = true;
+          errorBox.textContent = "";
           try {
             await window.ClinicFlow.apiPut("/api/clinic/staff/" + id, {
-              full_name: document.querySelector("#ed-name").value.trim(),
-              phone: document.querySelector("#ed-phone").value.trim() || null,
-              designation: document.querySelector("#ed-designation").value.trim() || null,
-              role_id: document.querySelector("#ed-role").value,
-              is_active: document.querySelector("#ed-active").checked,
+              full_name: fullName,
+              phone: modal.querySelector("#ed-phone").value.trim() || null,
+              designation: modal.querySelector("#ed-designation").value.trim() || null,
+              role_id: modal.querySelector("#ed-role").value,
+              is_active: modal.querySelector("#ed-active").checked,
             });
             window.ClinicFlow.toast("Staff updated", "ok");
             window.ClinicFlow.closeModal();
             await reloadStaff();
-          } catch (e) { window.ClinicFlow.toast(e.message, "error"); }
+          } catch (error) {
+            errorBox.textContent = error && error.message ? error.message : "Could not update staff.";
+          } finally {
+            saving = false;
+            if (modal.isConnected) confirm.disabled = false;
+          }
         });
       }
       if (resetBtn) {
