@@ -1,6 +1,7 @@
 ﻿from __future__ import annotations
 
 import os
+import re
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -236,18 +237,31 @@ def list_staff():
 def create_staff():
     clinic = current_clinic()
     payload = json_body()
-    full_name = (payload.get("full_name") or "").strip()
-    email = normalize_email(payload.get("email"))
+    raw_name = payload.get("full_name")
+    raw_email = payload.get("email")
+    if not isinstance(raw_name, str) or not isinstance(raw_email, str):
+        raise ValidationError("Staff name and email are required.")
+    full_name = raw_name.strip()
+    email = normalize_email(raw_email)
     if not full_name or not email:
         raise ValidationError("Staff name and email are required.")
+    if len(full_name) > 140:
+        raise ValidationError("Staff name must be 140 characters or fewer.")
+    if len(email) > 190 or not re.fullmatch(r"[^@\\s]+@[^@\\s]+\\.[^@\\s]+", email):
+        raise ValidationError("Enter a valid email address (up to 190 characters).")
     if User.query.filter_by(email=email).first():
         raise ConflictError("A user with that email already exists.")
-    role = get_scoped_or_404(Role, payload.get("role_id") or "")
+    role_id = payload.get("role_id")
+    role = Role.query.filter_by(id=role_id, clinic_id=clinic.id).first() if isinstance(role_id, str) and role_id else None
+    if role is None:
+        raise ValidationError("Select a valid role for this clinic.")
     if role.slug == "doctor":
         raise ValidationError("Create doctor accounts from the Doctors module so a clinical profile is created.")
     password = payload.get("password")
     temp_password = None
     if password:
+        if not isinstance(password, str):
+            raise ValidationError("Password must be text.")
         validate_password_strength(password)
     else:
         password = generate_temporary_password()
@@ -257,8 +271,8 @@ def create_staff():
         role_id=role.id,
         email=email,
         full_name=full_name[:140],
-        phone=(payload.get("phone") or None),
-        designation=(payload.get("designation") or role.name)[:80],
+        phone=(str(payload.get("phone")).strip()[:30] or None) if payload.get("phone") else None,
+        designation=(str(payload.get("designation") or role.name).strip()[:80] or role.name),
         password_hash=hash_password(password),
         must_change_password=temp_password is not None,
         avatar_color=(payload.get("avatar_color") or "#2563eb")[:16],
