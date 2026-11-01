@@ -52,6 +52,7 @@ window.ClinicFlow.registerRoute("consultations", {
           const patientId = modal.querySelector("#cn-patient").dataset.patientId;
           if (!patientId) { window.ClinicFlow.toast("Search and select a patient by code or name.", "error"); return; }
           const result = await window.ClinicFlow.apiPost("/api/consultations", { patient_id: patientId, doctor_id: $("#cn-doctor").value });
+          window.ClinicFlow.closeModal();
           // Keep the user on the consultation editor after saving.
           window.ClinicFlow.toast("Consultation draft created", "ok");
           await window.ClinicFlow.navigate("#/consultation/" + result.consultation.id);
@@ -105,7 +106,6 @@ window.ClinicFlow.registerRoute("consultation", {
       if (!vitals || typeof vitals !== "object" || Array.isArray(vitals)) throw new Error("Vitals must be a JSON object.");
       const followUp = $("#cf-followup").checked;
       const followUpDate = $("#cf-followup-date").value;
-      if (followUp && !followUpDate) throw new Error("Select a follow-up date before completing.");
       return {
         symptoms: $("#cf-symptoms").value,
         observations: $("#cf-observations").value,
@@ -133,6 +133,7 @@ window.ClinicFlow.registerRoute("consultation", {
       const button = host.querySelector("#consult-complete-btn");
       button.disabled = true;
       try {
+        if ($("#cf-followup").checked && !$("#cf-followup-date").value) throw new Error("Select a follow-up date before completing.");
         const result = await window.ClinicFlow.apiPost("/api/consultations/" + id + "/complete", collectPayload());
         window.ClinicFlow.toast("Consultation completed.", "ok");
         await window.ClinicFlow.navigate("#/consultation/" + result.consultation.id);
