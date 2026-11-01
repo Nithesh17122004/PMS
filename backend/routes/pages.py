@@ -16,7 +16,20 @@ pages_bp = Blueprint("pages", __name__)
 def index():
     if g.get("user"):
         return redirect(url_for("pages.app_home"))
+    from ..models import User
+
+    if User.query.count() == 0:
+        return redirect(url_for("pages.setup_page"))
     return redirect(url_for("auth.login_page"))
+
+
+@pages_bp.get("/setup")
+def setup_page():
+    from ..models import User
+
+    if User.query.count() > 0:
+        return redirect(url_for("auth.login_page"))
+    return render_template("auth/setup.html", page_title="First-time setup")
 
 
 @pages_bp.get("/app")

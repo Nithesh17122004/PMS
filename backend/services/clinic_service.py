@@ -42,7 +42,7 @@ def generate_temporary_password() -> str:
             return password
 
 
-def create_clinic(payload: dict, actor) -> tuple[Clinic, User, str]:
+def create_clinic(payload: dict, actor, commit: bool = True) -> tuple[Clinic, User, str]:
     name = (payload.get("name") or "").strip()
     if not name:
         raise ValidationError("Clinic name is required.")
@@ -127,5 +127,6 @@ def create_clinic(payload: dict, actor) -> tuple[Clinic, User, str]:
         clinic_id=clinic.id,
         user_id=actor.id if actor else None,
     )
-    db.session.commit()
+    if commit:
+        db.session.commit()
     return clinic, admin, password

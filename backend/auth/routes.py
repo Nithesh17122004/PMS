@@ -183,6 +183,30 @@ def api_forgot_password():
     return ok(generic)
 
 
+@auth_bp.post("/api/setup")
+def api_setup():
+    from ..services.setup_service import perform_setup
+
+    payload = request.get_json(silent=True) or request.form
+    # Normalize keys: accept both clinic_name and name, admin_name/full_name, etc.
+    normalized = {
+        "clinic_name": payload.get("clinic_name") or payload.get("name"),
+        "clinic_email": payload.get("clinic_email") or payload.get("email"),
+        "clinic_phone": payload.get("clinic_phone") or payload.get("phone"),
+        "clinic_address": payload.get("clinic_address") or payload.get("address"),
+        "admin_name": payload.get("admin_name") or payload.get("full_name") or payload.get("administrator_name"),
+        "admin_email": payload.get("admin_email") or payload.get("admin_username") or payload.get("username"),
+        "password": payload.get("password"),
+        "confirm_password": payload.get("confirm_password") or payload.get("confirm"),
+    }
+    clinic, admin = perform_setup(normalized, request_ip=request.headers.get("X-Forwarded-For", request.remote_addr or "")[:64])
+    establish_session(admin)
+    db.session.commit()
+    from ..utils.serializers import user_me
+
+    return ok({"user": user_me(admin), "redirect": "/app"})
+
+
 @auth_bp.post("/api/auth/reset-password")
 @limiter.limit("10 per minute")
 def api_reset_password():
