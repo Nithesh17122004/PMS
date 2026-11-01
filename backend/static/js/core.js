@@ -253,6 +253,7 @@ window.ClinicFlow.App = {
   /* Charts (dependency free SVG) */
   function lineChart(container, points, options) {
     options = options || {};
+    if (!container) return;
     const w = 560, h = 180, pad = 26;
     const data = points.data || points;
     if (!data || !data.length) return;
@@ -285,6 +286,7 @@ window.ClinicFlow.App = {
   }
   function barChart(container, items, options) {
     options = options || {};
+    if (!container) return;
     const w = 560, h = 180, pad = 26;
     const data = items.data || items;
     if (!data || !data.length) return;
@@ -308,6 +310,7 @@ window.ClinicFlow.App = {
     container.appendChild(svg);
   }
   function donutChart(container, items) {
+    if (!container) return;
     const data = items.data || items || [];
     const colors = ["#0e63b2", "#0d9488", "#b45309", "#6d28d9", "#dc2626", "#0369a1"];
     const total = data.reduce((s, d) => s + Number(d.value || 0), 0) || 1;

@@ -26,10 +26,14 @@ window.ClinicFlow.registerRoute("dashboard", {
       </div>
       <div class="card mt16"><div class="card-header"><div class="card-title">Daily revenue</div></div><div class="card-body"><div id="dash-revenue-chart"></div></div></div>
     `;
-    window.ClinicFlow.lineChart($("#dash-visits-chart"), { data: charts.daily_visits }, { xKey: "date" });
+    host.innerHTML = content;
+    const visitsEl = $("#dash-visits-chart");
+    if (visitsEl) window.ClinicFlow.lineChart(visitsEl, { data: charts.daily_visits }, { xKey: "date" });
+    const queueEl = $("#dash-queue-chart");
     const queueItems = (charts.token_queue || []).map((s) => ({ label: String(s.status).replace(/_/g, " "), value: s.count, color: statusColor(s.status) }));
-    window.ClinicFlow.donutChart($("#dash-queue-chart"), { data: queueItems });
-    window.ClinicFlow.barChart($("#dash-revenue-chart"), { data: charts.daily_revenue });
+    if (queueEl) window.ClinicFlow.donutChart(queueEl, { data: queueItems });
+    const revenueEl = $("#dash-revenue-chart");
+    if (revenueEl) window.ClinicFlow.barChart(revenueEl, { data: charts.daily_revenue });
     const btn = $("#dash-today-tokens");
     if (btn) btn.addEventListener("click", () => window.ClinicFlow.navigate("#/queue"));
   }
