@@ -46,6 +46,7 @@ window.ClinicFlow.registerRoute("settings", {
           <td class="right nowrap">
             <button class="btn btn-sm" data-edit="${u.id}">Edit</button>
             <button class="btn btn-sm" data-reset="${u.id}">Reset pwd</button>
+            <button class="btn btn-sm" data-set-password="${u.id}">Set password</button>
             <button class="btn btn-sm ${u.is_active ? "btn-danger" : ""}" data-toggle="${u.id}" data-active="${u.is_active}">${u.is_active ? "Deactivate" : "Activate"}</button>
           </td>
         </tr>`).join("");
@@ -159,6 +160,7 @@ window.ClinicFlow.registerRoute("settings", {
     document.querySelector("#staff-tbody").addEventListener("click", async (e) => {
       const editBtn = e.target.closest("[data-edit]");
       const resetBtn = e.target.closest("[data-reset]");
+      const setPasswordBtn = e.target.closest("[data-set-password]");
       const toggleBtn = e.target.closest("[data-toggle]");
       if (editBtn) {
         const id = editBtn.getAttribute("data-edit");
@@ -214,6 +216,45 @@ window.ClinicFlow.registerRoute("settings", {
             if (modal.isConnected) confirm.disabled = false;
           }
         });
+      }
+      if (setPasswordBtn) {
+        const id = setPasswordBtn.getAttribute("data-set-password");
+        const member = staffRows.find((x) => x.id === id);
+        if (!member) return;
+        const modal = window.ClinicFlow.openModal({ title: "Set password · " + member.full_name, wide: true });
+        const body = document.createElement("div");
+        body.innerHTML = `
+          <label class="field"><span>New password</span><input class="input" id="set-staff-password" type="password" maxlength="72" autocomplete="new-password"/></label>
+          <label class="field"><span>Confirm password</span><input class="input" id="set-staff-password-confirm" type="password" maxlength="72" autocomplete="new-password"/></label>
+          <label class="checkbox-row"><input type="checkbox" id="set-staff-force-change" checked/> Require this user to change it at next sign-in</label>
+          <div data-form-error role="alert" aria-live="polite" style="color:#b91c1c;margin-top:12px"></div>
+          <p class="muted small">The password is stored securely as a hash and is never displayed again. Do not send it over an insecure channel.</p>`;
+        modal.querySelector(".modal-body").appendChild(body);
+        const footer = document.createElement("div");
+        footer.innerHTML = '<button class="btn" type="button" data-modal-cancel>Cancel</button><button class="btn btn-primary" type="button" data-modal-confirm>Save password</button>';
+        modal.querySelector(".modal-footer").appendChild(footer);
+        const confirm = modal.querySelector("[data-modal-confirm]");
+        const errorBox = modal.querySelector("[data-form-error]");
+        window.ClinicFlow.bindModalAction(confirm, async () => {
+          const password = modal.querySelector("#set-staff-password").value;
+          const repeated = modal.querySelector("#set-staff-password-confirm").value;
+          if (password !== repeated) {
+            errorBox.textContent = "The passwords do not match.";
+            return;
+          }
+          if (password.length < 10 || password.length > 72 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+            errorBox.textContent = "Use 10–72 characters with uppercase, lowercase, a number and a symbol.";
+            return;
+          }
+          errorBox.textContent = "";
+          await window.ClinicFlow.apiPost("/api/clinic/staff/" + id + "/set-password", {
+            password,
+            require_change: modal.querySelector("#set-staff-force-change").checked,
+          });
+          window.ClinicFlow.toast("Password updated for " + member.full_name, "ok");
+          window.ClinicFlow.closeModal();
+          await reloadStaff();
+        }, (error) => { errorBox.textContent = error.message || "Could not update the password."; });
       }
       if (resetBtn) {
         const id = resetBtn.getAttribute("data-reset");
