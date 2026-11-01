@@ -409,7 +409,15 @@ def prescription_dict(prescription):
 def followup_dict(plan):
     if not plan:
         return None
-    token = plan.tokens[0] if plan.tokens else None
+    tokens = sorted(
+        plan.tokens,
+        key=lambda item: (item.created_at.isoformat() if item.created_at else (item.token_date.isoformat() if item.token_date else ""), item.token_number),
+        reverse=True,
+    )
+    token = next(
+        (item for item in tokens if item.status not in ("cancelled", "completed", "skipped", "no_show")),
+        tokens[0] if tokens else None,
+    )
     return {
         "id": plan.id,
         "patient": patient_summary(plan.patient),

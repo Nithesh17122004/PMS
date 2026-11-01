@@ -40,7 +40,7 @@ def _database_url() -> str:
 
 class BaseConfig:
     APP_NAME = "ClinicFlow"
-    APP_VERSION = "1.0.8"
+    APP_VERSION = "1.0.9"
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-insecure-secret-change-me")
     DATABASE_URL = _database_url()
     SQLALCHEMY_DATABASE_URI = DATABASE_URL

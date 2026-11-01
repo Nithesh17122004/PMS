@@ -266,3 +266,40 @@ def test_doctor_schedule_requires_doctors_manage_permission(client, receptionist
         json=_schedule_payload(),
     )
     assert response.status_code == 403
+
+def test_admin_can_set_staff_password_and_temporary_user_must_change_it(client, clinic_admin, receptionist):
+    login(client, "admin@clinic.test")
+    password = "AdminSet@12345"
+    response = client.post(
+        f"/api/clinic/staff/{receptionist.id}/set-password",
+        json={"password": password, "require_change": True},
+    )
+    assert response.status_code == 200, response.get_json()
+    assert verify_password(password, receptionist.password_hash)
+    assert receptionist.must_change_password is True
+    assert receptionist.failed_login_attempts == 0
+    assert receptionist.locked_until is None
+
+    user_client = client.application.test_client()
+    signed_in = user_client.post(
+        "/api/auth/login",
+        json={"email": receptionist.email, "password": password},
+    )
+    assert signed_in.status_code == 200
+    assert user_client.get("/api/patients").status_code == 428
+
+    changed = user_client.post(
+        "/api/auth/change-password",
+        json={"current_password": password, "new_password": "ReceptionNew@123"},
+    )
+    assert changed.status_code == 200, changed.get_json()
+    assert user_client.get("/api/patients").status_code == 200
+
+
+def test_admin_cannot_use_staff_password_route_on_own_account(client, clinic_admin):
+    login(client, "admin@clinic.test")
+    response = client.post(
+        f"/api/clinic/staff/{clinic_admin.id}/set-password",
+        json={"password": "AdminSet@12345", "require_change": False},
+    )
+    assert response.status_code == 403

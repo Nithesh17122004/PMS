@@ -1,6 +1,7 @@
 window.ClinicFlow.registerRoute("settings", {
   async render() {
     const host = document.querySelector("#page-content");
+    const canManageStaff = window.ClinicFlow.can("staff.manage");
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
     const clinic = await window.ClinicFlow.apiGet("/api/clinic").catch(() => null);
     const c = (clinic && (clinic.clinic || clinic)) || {};
@@ -14,7 +15,7 @@ window.ClinicFlow.registerRoute("settings", {
     const allPerms = (perms && perms.permissions) || [];
     host.innerHTML = `
       <div class="page-head"><div><div class="page-title">Settings</div><div class="page-sub">Clinic, staff, roles and audit</div></div>
-        <button class="btn btn-accent" id="staff-new">${window.ClinicFlow.icon("plus", 16)} Add staff</button>
+        <div class="row"><button class="btn" id="change-my-password">Change my password</button>${canManageStaff ? '<button class="btn btn-accent" id="staff-new">' + window.ClinicFlow.icon("plus", 16) + " Add staff</button>" : ""}</div>
       </div>
       <div class="card mb16"><div class="card-header"><div class="card-title">Clinic</div></div><div class="card-body grid cols-2">
         <div><div class="muted small">Name</div><b>${window.ClinicFlow.escapeHtml(c.name || "")}</b></div>
@@ -32,6 +33,41 @@ window.ClinicFlow.registerRoute("settings", {
       <div class="card"><div class="card-header"><div class="card-title">Audit log</div></div><div class="table-wrap"><table class="table"><thead><tr><th>Actor</th><th>Action</th><th>Entity</th><th>When</th></tr></thead><tbody id="audit-tbody"></tbody></table></div></div>
     `;
 
+    const changeMyPassword = document.querySelector("#change-my-password");
+    if (changeMyPassword) {
+      changeMyPassword.addEventListener("click", () => {
+        const modal = window.ClinicFlow.openModal({ title: "Change my password", wide: true });
+        const body = document.createElement("div");
+        body.innerHTML = `
+          <label class="field"><span>Current password</span><input class="input" id="my-current-password" type="password" autocomplete="current-password"/></label>
+          <label class="field"><span>New password</span><input class="input" id="my-new-password" type="password" maxlength="72" autocomplete="new-password"/></label>
+          <label class="field"><span>Confirm new password</span><input class="input" id="my-confirm-password" type="password" maxlength="72" autocomplete="new-password"/></label>
+          <p class="muted small">Use at least 10 characters with uppercase, lowercase, a number and a symbol.</p>
+          <div data-form-error role="alert" style="color:#b91c1c"></div>`;
+        modal.querySelector(".modal-body").appendChild(body);
+        const footer = document.createElement("div");
+        footer.innerHTML = '<button class="btn" type="button" data-modal-cancel>Cancel</button><button class="btn btn-primary" type="button" data-modal-confirm>Update password</button>';
+        modal.querySelector(".modal-footer").appendChild(footer);
+        const errorBox = modal.querySelector("[data-form-error]");
+        window.ClinicFlow.bindModalAction(modal.querySelector("[data-modal-confirm]"), async () => {
+          const currentPassword = modal.querySelector("#my-current-password").value;
+          const nextPassword = modal.querySelector("#my-new-password").value;
+          const confirmPassword = modal.querySelector("#my-confirm-password").value;
+          if (nextPassword !== confirmPassword) { errorBox.textContent = "The new passwords do not match."; return; }
+          if (nextPassword.length < 10 || nextPassword.length > 72 || !/[A-Z]/.test(nextPassword) || !/[a-z]/.test(nextPassword) || !/[0-9]/.test(nextPassword) || !/[^A-Za-z0-9]/.test(nextPassword)) {
+            errorBox.textContent = "Use 10–72 characters with uppercase, lowercase, a number and a symbol.";
+            return;
+          }
+          await window.ClinicFlow.apiPost("/api/auth/change-password", {
+            current_password: currentPassword,
+            new_password: nextPassword,
+          });
+          window.ClinicFlow.toast("Your password has been changed.", "ok");
+          window.ClinicFlow.closeModal();
+        }, (error) => { errorBox.textContent = error.message || "Password could not be updated."; });
+      });
+    }
+
     let staffRows = staff || [];
     const renderStaff = (rows) => {
       staffRows = rows || [];
@@ -44,9 +80,12 @@ window.ClinicFlow.registerRoute("settings", {
           <td>${window.ClinicFlow.escapeHtml(u.role ? u.role.name : "")}</td>
           <td>${window.ClinicFlow.statusBadge(u.is_active ? "active" : "inactive")}</td>
           <td class="right nowrap">
-            <button class="btn btn-sm" data-edit="${u.id}">Edit</button>
-            <button class="btn btn-sm" data-reset="${u.id}">Reset pwd</button>
-            <button class="btn btn-sm ${u.is_active ? "btn-danger" : ""}" data-toggle="${u.id}" data-active="${u.is_active}">${u.is_active ? "Deactivate" : "Activate"}</button>
+            ${canManageStaff ? '<button class="btn btn-sm" data-edit="' + u.id + '">Edit</button>' : ""}
+            ${canManageStaff && u.id !== window.ClinicFlow.state.user.id ? `
+              <button class="btn btn-sm" data-reset="${u.id}">Reset pwd</button>
+              <button class="btn btn-sm" data-set-password="${u.id}">Set password</button>
+              <button class="btn btn-sm ${u.is_active ? "btn-danger" : ""}" data-toggle="${u.id}" data-active="${u.is_active}">${u.is_active ? "Deactivate" : "Activate"}</button>
+            ` : '<span class="muted small">Current account</span>'}
           </td>
         </tr>`).join("");
     };
@@ -60,7 +99,7 @@ window.ClinicFlow.registerRoute("settings", {
           <td><b>${window.ClinicFlow.escapeHtml(r.name)}</b><div class="muted small">${window.ClinicFlow.escapeHtml(r.slug)}</div></td>
           <td class="muted small">${(r.permissions || []).length} permissions</td>
           <td>${r.user_count ?? 0}</td>
-          <td class="right"><button class="btn btn-sm" data-perms="${r.id}">Manage permissions</button></td>
+          <td class="right">${canManageStaff ? '<button class="btn btn-sm" data-perms="' + r.id + '">Manage permissions</button>' : ""}</td>
         </tr>`).join("");
     };
     renderRoles(roleList || []);
@@ -89,7 +128,7 @@ window.ClinicFlow.registerRoute("settings", {
     document.querySelector("#staff-status").addEventListener("change", reloadStaff);
 
     // Create non-doctor staff accounts. Doctor logins and profiles are created together in Doctors.
-    document.querySelector("#staff-new").addEventListener("click", () => {
+    document.querySelector("#staff-new")?.addEventListener("click", () => {
       const modal = window.ClinicFlow.openModal({ title: "Add staff", wide: true });
       const body = document.createElement("div");
       body.innerHTML = `
@@ -159,6 +198,7 @@ window.ClinicFlow.registerRoute("settings", {
     document.querySelector("#staff-tbody").addEventListener("click", async (e) => {
       const editBtn = e.target.closest("[data-edit]");
       const resetBtn = e.target.closest("[data-reset]");
+      const setPasswordBtn = e.target.closest("[data-set-password]");
       const toggleBtn = e.target.closest("[data-toggle]");
       if (editBtn) {
         const id = editBtn.getAttribute("data-edit");
@@ -214,6 +254,45 @@ window.ClinicFlow.registerRoute("settings", {
             if (modal.isConnected) confirm.disabled = false;
           }
         });
+      }
+      if (setPasswordBtn) {
+        const id = setPasswordBtn.getAttribute("data-set-password");
+        const member = staffRows.find((x) => x.id === id);
+        if (!member) return;
+        const modal = window.ClinicFlow.openModal({ title: "Set password · " + member.full_name, wide: true });
+        const body = document.createElement("div");
+        body.innerHTML = `
+          <label class="field"><span>New password</span><input class="input" id="set-staff-password" type="password" maxlength="72" autocomplete="new-password"/></label>
+          <label class="field"><span>Confirm password</span><input class="input" id="set-staff-password-confirm" type="password" maxlength="72" autocomplete="new-password"/></label>
+          <label class="checkbox-row"><input type="checkbox" id="set-staff-force-change" checked/> Require this user to change it at next sign-in</label>
+          <div data-form-error role="alert" aria-live="polite" style="color:#b91c1c;margin-top:12px"></div>
+          <p class="muted small">The password is stored securely as a hash and is never displayed again. Do not send it over an insecure channel.</p>`;
+        modal.querySelector(".modal-body").appendChild(body);
+        const footer = document.createElement("div");
+        footer.innerHTML = '<button class="btn" type="button" data-modal-cancel>Cancel</button><button class="btn btn-primary" type="button" data-modal-confirm>Save password</button>';
+        modal.querySelector(".modal-footer").appendChild(footer);
+        const confirm = modal.querySelector("[data-modal-confirm]");
+        const errorBox = modal.querySelector("[data-form-error]");
+        window.ClinicFlow.bindModalAction(confirm, async () => {
+          const password = modal.querySelector("#set-staff-password").value;
+          const repeated = modal.querySelector("#set-staff-password-confirm").value;
+          if (password !== repeated) {
+            errorBox.textContent = "The passwords do not match.";
+            return;
+          }
+          if (password.length < 10 || password.length > 72 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
+            errorBox.textContent = "Use 10–72 characters with uppercase, lowercase, a number and a symbol.";
+            return;
+          }
+          errorBox.textContent = "";
+          await window.ClinicFlow.apiPost("/api/clinic/staff/" + id + "/set-password", {
+            password,
+            require_change: modal.querySelector("#set-staff-force-change").checked,
+          });
+          window.ClinicFlow.toast("Password updated for " + member.full_name, "ok");
+          window.ClinicFlow.closeModal();
+          await reloadStaff();
+        }, (error) => { errorBox.textContent = error.message || "Could not update the password."; });
       }
       if (resetBtn) {
         const id = resetBtn.getAttribute("data-reset");

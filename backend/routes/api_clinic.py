@@ -355,6 +355,38 @@ def reset_staff_password(user_id):
     return ok({"temporary_password": password, "staff": staff_dict(user)})
 
 
+@clinic_bp.post("/api/clinic/staff/<user_id>/set-password")
+@permission_required("staff.manage")
+def set_staff_password(user_id):
+    """Let clinic administrators set a known password for another clinic user."""
+    clinic = current_clinic()
+    user = User.query.filter_by(id=user_id, clinic_id=clinic.id).first()
+    if user is None:
+        raise ConflictError("Staff member not found.")
+    if user.id == g.user.id:
+        raise ForbiddenError("Use your own profile settings to change your password.")
+    payload = json_body()
+    password = payload.get("password")
+    if not isinstance(password, str):
+        raise ValidationError("A new password is required.")
+    validate_password_strength(password)
+    user.password_hash = hash_password(password)
+    user.must_change_password = bool(payload.get("require_change", True))
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    user.password_changed_at = datetime.now(timezone.utc)
+    audit(
+        "staff.password_set",
+        "user",
+        user.id,
+        {"must_change_password": user.must_change_password},
+        clinic_id=clinic.id,
+        user_id=g.user.id,
+    )
+    db.session.commit()
+    return ok({"staff": staff_dict(user), "message": "Password updated successfully."})
+
+
 @clinic_bp.get("/api/clinic/roles")
 @permission_required("staff.view")
 def list_roles():

@@ -41,22 +41,36 @@ def queue_key_for(clinic, doctor_id: str) -> str:
 
 def ensure_queue_access(token: DailyToken) -> None:
     user = current_user()
-    if "tokens.manage_all" in getattr(g, "permissions", set()):
+    permissions = getattr(g, "permissions", set())
+    if "tokens.manage_all" in permissions:
         return
-    doctor = user.doctor_profile
+    # Clinic-scoped staff actions are already permission-gated by the API route
+    # and tenant-scoped by get_scoped_or_404. Doctors remain limited to their
+    # own queue unless they explicitly have tokens.manage_all.
+    if user and user.clinic_id == token.clinic_id and user.doctor_profile is None:
+        return
+    doctor = user.doctor_profile if user else None
     if doctor is None or token.doctor_id != doctor.id:
-        raise ForbiddenError("Doctors may only manage their own queue.")
+        raise ForbiddenError("You may only manage queues assigned to your account.")
 
 
 def resolve_doctor_id(requested: str | None) -> str:
     user = current_user()
-    if "tokens.manage_all" in getattr(g, "permissions", set()):
+    permissions = getattr(g, "permissions", set())
+    clinic = current_clinic()
+    if "tokens.manage_all" in permissions or (
+        user and user.clinic_id == clinic.id and "tokens.call" in permissions
+        and user.doctor_profile is None
+    ):
         if not requested:
             raise ValidationError("Select a doctor for this queue action.")
-        return requested
-    doctor = user.doctor_profile
+        doctor = Doctor.query.filter_by(id=requested, clinic_id=clinic.id, is_active=True).first()
+        if doctor is None:
+            raise NotFoundError("Doctor not found in this clinic.")
+        return doctor.id
+    doctor = user.doctor_profile if user else None
     if doctor is None:
-        raise ForbiddenError("This action is limited to assigned clinical staff.")
+        raise ForbiddenError("This action is limited to staff with queue access.")
     if requested and requested != doctor.id:
         raise ForbiddenError("Doctors may only manage their own queue.")
     return doctor.id

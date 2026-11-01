@@ -204,8 +204,8 @@ window.ClinicFlow.App = {
     try { payload = await res.json(); } catch (e) { payload = null; }
     if (res.status === 429) { toast(payload && payload.error && payload.error.message ? payload.error.message : "Too many requests. Please wait.", "info"); }
     if (res.status >= 400) {
-      if (res.status === 401 && !location.pathname.startsWith("/login") && !location.pathname.startsWith("/reset")) {
-        window.location.hash = "#/dashboard";
+      if (res.status === 401 && !location.pathname.startsWith("/login") && !location.pathname.startsWith("/reset") && !location.pathname.startsWith("/forgot")) {
+        window.location.replace("/login");
       }
       throw Object.assign(new Error((payload && payload.error && payload.error.message) || "Request failed"), { status: res.status, code: payload && payload.error ? payload.error.code : "error", data: payload });
     }
@@ -521,29 +521,26 @@ window.ClinicFlow.App = {
 
   /* Shell rendering */
   function sidebarGroups() {
-    const user = state.user;
+    const user = state.user || {};
+    const permissions = new Set(user.permissions || []);
+    const can = (code) => permissions.has(code);
+    const any = (...codes) => codes.some(can);
     const groups = [];
-    if ((user.permissions || []).includes("platform.view")) {
+    if (can("platform.view")) {
       groups.push({ label: "Platform", items: [["admin", "Clinics", "admin"]] });
     }
-    groups.push(
-      { label: "Overview", items: [["dashboard", "Dashboard", "dashboard"]] },
-      { label: "Patients", items: [["patients", "Patients", "patients"]] },
-      { label: "Queue", items: [["appointments", "Appointments", "calendar"], ["queue", "Token Queue", "queue"]] },
-      {
-        label: "Clinical",
-        items: [
-          ["consultations", "Consultations", "consultations"],
-          ["followups", "Follow-ups", "followups"],
-          ["prescriptions", "Prescriptions", "prescriptions"],
-        ],
-      },
-      {
-        label: "Financial",
-        items: [["billing", "Billing", "billing"], ["pharmacy", "Pharmacy", "pharmacy"], ["lab", "Laboratory", "lab"], ["reports", "Reports", "reports"]],
-      },
-      { label: "Operations", items: [["doctors", "Doctors", "doctors"], ["notifications", "Notifications", "notifications"], ["settings", "Settings", "settings"]] },
-    );
+    const candidates = [
+      { label: "Overview", items: [["dashboard", "Dashboard", "dashboard", "dashboard.view"]] },
+      { label: "Patients", items: [["patients", "Patients", "patients", "patients.view"]] },
+      { label: "Queue", items: [["appointments", "Appointments", "calendar", "appointments.view"], ["queue", "Token Queue", "queue", "tokens.view"]] },
+      { label: "Clinical", items: [["consultations", "Consultations", "consultations", "consultations.view"], ["followups", "Follow-ups", "followups", "followups.view"], ["prescriptions", "Prescriptions", "prescriptions", "prescriptions.view"]] },
+      { label: "Financial", items: [["billing", "Billing", "billing", "billing.view"], ["pharmacy", "Pharmacy", "pharmacy", "pharmacy.view"], ["lab", "Laboratory", "lab", "lab.view"], ["reports", "Reports", "reports", "reports.view"]] },
+      { label: "Operations", items: [["doctors", "Doctors", "doctors", "doctors.view"], ["notifications", "Notifications", "notifications", "notifications.view"], ["settings", "Settings", "settings", "settings.view"]] },
+    ];
+    candidates.forEach((group) => {
+      const items = group.items.filter((item) => can(item[3]) || (item[0] === "settings" && any("staff.view", "staff.manage", "audit.view", "settings.manage", "settings.view")));
+      if (items.length) groups.push({ label: group.label, items });
+    });
     return groups;
   }
 
@@ -621,12 +618,123 @@ window.ClinicFlow.App = {
     return map[page] || "";
   }
 
+  function bindPatientCodePicker(input, results, onSelect) {
+    if (!input || !results) return;
+    let timer = null;
+    let requestId = 0;
+    input.addEventListener("input", () => {
+      delete input.dataset.patientId;
+      if (typeof onSelect === "function") onSelect(null);
+      if (timer) clearTimeout(timer);
+      const term = input.value.trim();
+      const thisRequest = ++requestId;
+      if (term.length < 2) {
+        results.innerHTML = term ? '<div class="muted small">Enter at least 2 characters or a patient code.</div>' : "";
+        return;
+      }
+      results.innerHTML = '<div class="muted small">Searching patients…</div>';
+      timer = setTimeout(async () => {
+        try {
+          const response = await apiPost("/api/patients/search", { query: term, limit: 10 });
+          if (thisRequest !== requestId) return;
+          const patients = response && response.patients ? response.patients : [];
+          if (!patients.length) {
+            results.innerHTML = '<div class="muted small">No matching active patients found.</div>';
+            return;
+          }
+          results.innerHTML = patients.map((patient) =>
+            '<button type="button" class="btn btn-sm" style="display:flex;width:100%;justify-content:space-between;margin:4px 0;text-align:left" data-patient-select="' + escapeHtml(patient.id) + '">' +
+            '<span><b>' + escapeHtml(patient.patient_code) + '</b> · ' + escapeHtml(patient.full_name) +
+            '<span class="muted small" style="display:block">' + escapeHtml(patient.phone_masked || patient.phone || "") + '</span></span>' +
+            '<span class="muted small">Select</span></button>'
+          ).join("");
+        } catch (error) {
+          results.innerHTML = '<div class="small" style="color:#b91c1c">' + escapeHtml(error.message || "Patient search failed.") + '</div>';
+        }
+      }, 180);
+    });
+    results.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-patient-select]");
+      if (!button) return;
+      const id = button.getAttribute("data-patient-select");
+      try {
+        const response = await apiGet("/api/patients/" + encodeURIComponent(id));
+        const patient = response && response.patient;
+        if (!patient) throw new Error("Patient record could not be loaded.");
+        input.dataset.patientId = patient.id;
+        input.value = patient.patient_code + " — " + patient.full_name;
+        results.innerHTML = '<div class="small" style="color:#047857">Selected: <b>' + escapeHtml(patient.patient_code) + '</b> · ' + escapeHtml(patient.full_name) + '</div>';
+        if (typeof onSelect === "function") onSelect(patient);
+      } catch (error) {
+        results.innerHTML = '<div class="small" style="color:#b91c1c">' + escapeHtml(error.message || "Could not load this patient.") + '</div>';
+      }
+    });
+  }
+
+  function renderRequiredPasswordChange() {
+    const root = $("#app-root");
+    if (!root) return;
+    root.innerHTML = '<div style="min-height:100vh;background:#f4f7fb;display:grid;place-items:center;padding:24px">' +
+      '<form id="required-password-form" class="card" style="width:min(100%,520px);padding:28px">' +
+      '<h1 style="margin:0 0 8px">Change your temporary password</h1>' +
+      '<p class="muted">Your administrator provided a temporary password. Set a new password to continue to ClinicFlow.</p>' +
+      '<label class="field"><span>Current / temporary password</span><input class="input" type="password" id="required-current" autocomplete="current-password" required></label>' +
+      '<label class="field"><span>New password</span><input class="input" type="password" id="required-new" autocomplete="new-password" minlength="10" maxlength="72" required></label>' +
+      '<label class="field"><span>Confirm new password</span><input class="input" type="password" id="required-confirm" autocomplete="new-password" minlength="10" maxlength="72" required></label>' +
+      '<p class="muted small">Use at least 10 characters with uppercase, lowercase, a number and a symbol.</p>' +
+      '<div id="required-password-error" role="alert" style="color:#b91c1c;margin:12px 0" hidden></div>' +
+      '<button class="btn btn-primary" type="submit" style="width:100%">Update password and continue</button>' +
+      '<button class="btn" type="button" id="required-password-logout" style="width:100%;margin-top:8px">Sign out</button>' +
+      '</form></div>';
+    const form = $("#required-password-form");
+    const errorBox = $("#required-password-error");
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const current = $("#required-current").value;
+      const next = $("#required-new").value;
+      const confirm = $("#required-confirm").value;
+      if (next !== confirm) {
+        errorBox.textContent = "The new passwords do not match.";
+        errorBox.hidden = false;
+        return;
+      }
+      if (next.length < 10 || next.length > 72 || !/[A-Z]/.test(next) || !/[a-z]/.test(next) || !/[0-9]/.test(next) || !/[^A-Za-z0-9]/.test(next)) {
+        errorBox.textContent = "Use 10–72 characters with uppercase, lowercase, a number and a symbol.";
+        errorBox.hidden = false;
+        return;
+      }
+      const submit = form.querySelector('[type="submit"]');
+      submit.disabled = true;
+      errorBox.hidden = true;
+      try {
+        await apiPost("/api/auth/change-password", { current_password: current, new_password: next });
+        state.user.must_change_password = false;
+        toast("Password updated. Welcome to ClinicFlow.", "ok");
+        shell();
+        await routeChange();
+      } catch (error) {
+        errorBox.textContent = error.message || "Password could not be updated.";
+        errorBox.hidden = false;
+      } finally {
+        if (submit.isConnected) submit.disabled = false;
+      }
+    });
+    $("#required-password-logout").addEventListener("click", async () => {
+      try { await apiPost("/api/auth/logout"); } catch (error) {}
+      window.location.replace("/login");
+    });
+  }
+
   async function init() {
     const me = await apiGet("/api/auth/me");
     state.user = me.user;
     state.clinic = me.user.clinic;
     state.permissions = me.user.permissions || [];
     state.initialized = true;
+    if (me.user.must_change_password) {
+      renderRequiredPasswordChange();
+      return;
+    }
     shell();
     $("#page-title").textContent = titleFor(state.page);
     $("#page-sub").textContent = subtitleFor(state.page);
@@ -677,6 +785,7 @@ window.ClinicFlow.App = {
   window.ClinicFlow.subtitleFor = subtitleFor;
   window.ClinicFlow.escapeHtml = escapeHtml;
   window.ClinicFlow.apiPost = apiPost;
+  window.ClinicFlow.bindPatientCodePicker = bindPatientCodePicker;
   window.ClinicFlow.apiPut = apiPut;
   window.ClinicFlow.apiDelete = apiDelete;
   window.ClinicFlow.apiGet = apiGet;

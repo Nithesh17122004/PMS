@@ -121,3 +121,37 @@ def test_followup_does_not_auto_generate_token(client, clinic, clinic_admin, doc
 
     count = DailyToken.query.filter_by(clinic_id=clinic.id, patient_id=p1.id).count()
     assert count == 0
+
+def test_receptionist_can_generate_and_call_doctor_queue(client, clinic, clinic_admin, receptionist, doctor):
+    login(client, "reception@clinic.test")
+    patient = create_patient(clinic, clinic_admin, first_name="Queue", phone="+919000000099")
+    generated = client.post(
+        "/api/tokens",
+        json={"patient_id": patient.id, "doctor_id": doctor.id, "visit_type": "walk_in"},
+    )
+    assert generated.status_code == 201, generated.get_json()
+    token_id = generated.get_json()["data"]["token"]["id"]
+
+    called = client.post(f"/api/tokens/{token_id}/call")
+    assert called.status_code == 200, called.get_json()
+    assert called.get_json()["data"]["token"]["status"] == "called"
+
+    recalled = client.post(f"/api/tokens/{token_id}/recall")
+    assert recalled.status_code == 200, recalled.get_json()
+    assert recalled.get_json()["data"]["token"]["status"] == "recalled"
+
+def test_receptionist_queue_board_includes_each_doctor_and_next_patient(client, clinic, clinic_admin, receptionist, doctor):
+    login(client, "reception@clinic.test")
+    patient = create_patient(clinic, clinic_admin, first_name="Board", phone="+919000000097")
+    created = client.post(
+        "/api/tokens",
+        json={"patient_id": patient.id, "doctor_id": doctor.id},
+    )
+    assert created.status_code == 201, created.get_json()
+
+    response = client.get("/api/tokens/queue")
+    assert response.status_code == 200, response.get_json()
+    queues = response.get_json()["data"]["queues"]
+    doctor_queue = next(queue for queue in queues if queue["doctor"]["id"] == doctor.id)
+    assert doctor_queue["counts"]["waiting"] == 1
+    assert doctor_queue["next"]["patient"]["patient_code"] == patient.patient_code
