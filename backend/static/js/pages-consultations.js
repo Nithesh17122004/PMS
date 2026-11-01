@@ -88,7 +88,7 @@ window.ClinicFlow.registerRoute("consultation", {
         <label class="checkbox-row"><input type="checkbox" id="cf-followup" ${c.follow_up_required ? "checked" : ""}/> Follow-up required</label>
         <label class="field"><span>Follow-up date</span><input class="input" type="date" id="cf-followup-date"/></label>
         <label class="field"><span>Follow-up priority</span><select class="select" id="cf-followup-priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
-        <label class="field full"><span>Diagnoses (ICD codes)</span><textarea class="input" id="cf-icd" placeholder='[{"icd_code":"J06.9","description":"Acute URI","diagnosis_type":"primary"}]'></textarea></label>
+        <label class="field full"><span>Diagnoses (ICD codes)</span><textarea class="input" id="cf-icd" placeholder='[{"icd_code":"J06.9","description":"Acute URI","diagnosis_type":"primary"}]'>${window.ClinicFlow.escapeHtml(JSON.stringify(c.diagnoses || [], null, 2))}</textarea></label>
       </div>
       <div class="row mt16">
         <button class="btn" id="consult-save">Save draft</button>
