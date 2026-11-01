@@ -71,3 +71,22 @@ def test_followup_dashboard_counts(client, clinic, clinic_admin, doctor, db):
     resp = client.get("/api/followups/dashboard")
     assert resp.status_code == 200
     assert "counts" in resp.get_json()["data"]
+
+def test_doctor_can_register_followup_arrival_and_generate_token(client, clinic, clinic_admin, doctor):
+    login(client, "doctor@clinic.test")
+    patient = create_patient(clinic, clinic_admin, first_name="Follow", phone="+919000000098")
+    created = client.post(
+        "/api/followups",
+        json={
+            "patient_id": patient.id,
+            "doctor_id": doctor.id,
+            "due_date": date.today().isoformat(),
+            "instructions": "Review response to treatment",
+        },
+    )
+    assert created.status_code == 201, created.get_json()
+    plan_id = created.get_json()["data"]["followup"]["id"]
+
+    arrived = client.post(f"/api/followups/{plan_id}/arrive", json={})
+    assert arrived.status_code == 201, arrived.get_json()
+    assert arrived.get_json()["data"]["token"]["visit_type"] == "follow_up"
