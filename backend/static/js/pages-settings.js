@@ -1,6 +1,7 @@
 window.ClinicFlow.registerRoute("settings", {
   async render() {
     const host = document.querySelector("#page-content");
+    const canManageStaff = window.ClinicFlow.can("staff.manage");
     host.innerHTML = '<div class="loading-overlay"><div class="spinner"></div></div>';
     const clinic = await window.ClinicFlow.apiGet("/api/clinic").catch(() => null);
     const c = (clinic && (clinic.clinic || clinic)) || {};
@@ -14,7 +15,7 @@ window.ClinicFlow.registerRoute("settings", {
     const allPerms = (perms && perms.permissions) || [];
     host.innerHTML = `
       <div class="page-head"><div><div class="page-title">Settings</div><div class="page-sub">Clinic, staff, roles and audit</div></div>
-        <div class="row"><button class="btn" id="change-my-password">Change my password</button><button class="btn btn-accent" id="staff-new">${window.ClinicFlow.icon("plus", 16)} Add staff</button></div>
+        <div class="row"><button class="btn" id="change-my-password">Change my password</button>${canManageStaff ? '<button class="btn btn-accent" id="staff-new">' + window.ClinicFlow.icon("plus", 16) + " Add staff</button>" : ""}</div>
       </div>
       <div class="card mb16"><div class="card-header"><div class="card-title">Clinic</div></div><div class="card-body grid cols-2">
         <div><div class="muted small">Name</div><b>${window.ClinicFlow.escapeHtml(c.name || "")}</b></div>
@@ -79,8 +80,8 @@ window.ClinicFlow.registerRoute("settings", {
           <td>${window.ClinicFlow.escapeHtml(u.role ? u.role.name : "")}</td>
           <td>${window.ClinicFlow.statusBadge(u.is_active ? "active" : "inactive")}</td>
           <td class="right nowrap">
-            <button class="btn btn-sm" data-edit="${u.id}">Edit</button>
-            ${u.id !== window.ClinicFlow.state.user.id ? `
+            ${canManageStaff ? '<button class="btn btn-sm" data-edit="' + u.id + '">Edit</button>' : ""}
+            ${canManageStaff && u.id !== window.ClinicFlow.state.user.id ? `
               <button class="btn btn-sm" data-reset="${u.id}">Reset pwd</button>
               <button class="btn btn-sm" data-set-password="${u.id}">Set password</button>
               <button class="btn btn-sm ${u.is_active ? "btn-danger" : ""}" data-toggle="${u.id}" data-active="${u.is_active}">${u.is_active ? "Deactivate" : "Activate"}</button>
@@ -98,7 +99,7 @@ window.ClinicFlow.registerRoute("settings", {
           <td><b>${window.ClinicFlow.escapeHtml(r.name)}</b><div class="muted small">${window.ClinicFlow.escapeHtml(r.slug)}</div></td>
           <td class="muted small">${(r.permissions || []).length} permissions</td>
           <td>${r.user_count ?? 0}</td>
-          <td class="right"><button class="btn btn-sm" data-perms="${r.id}">Manage permissions</button></td>
+          <td class="right">${canManageStaff ? '<button class="btn btn-sm" data-perms="' + r.id + '">Manage permissions</button>' : ""}</td>
         </tr>`).join("");
     };
     renderRoles(roleList || []);
