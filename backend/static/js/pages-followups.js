@@ -71,7 +71,7 @@ window.ClinicFlow.registerRoute("followups", {
     });
     tbody.addEventListener("click", (event) => {
       const button = event.target.closest("[data-view]");
-      if (button) window.ClinicFlow.navigate("#/followups/" + button.getAttribute("data-view"));
+      if (button) window.ClinicFlow.navigate("#/followup/" + button.getAttribute("data-view"));
     });
     await refresh();
 
@@ -180,7 +180,7 @@ window.ClinicFlow.registerRoute("followup", {
       });
       actions.appendChild(button);
     };
-    const refreshDetail = () => window.ClinicFlow.navigate("#/followups/" + id);
+    const refreshDetail = () => window.ClinicFlow.navigate("#/followup/" + id);
     $("#page-content [data-back]").addEventListener("click", () => window.ClinicFlow.navigate("#/followups"));
     if (mayManage && ["upcoming", "missed"].includes(f.status)) {
       addAction("Confirm", async () => {
