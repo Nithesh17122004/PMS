@@ -216,7 +216,7 @@ def cancel(plan_id):
 
 
 @followups_bp.post("/api/followups/<plan_id>/arrive")
-@permission_required("tokens.create")
+@permission_required("followups.manage")
 def arrive(plan_id):
     plan = get_scoped_or_404(FollowUpPlan, plan_id)
     token = arrive_followup(plan, g.user, json_body().get("notes"))
